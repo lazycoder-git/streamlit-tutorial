@@ -1,11 +1,8 @@
-# Python cache
 __pycache__/
 *.py[cod]
 
-# Virtual environment
 .venv/
 
-# Streamlit secrets (never commit these)
 .streamlit/secrets.toml
 
 # User data (regenerated at runtime, not part of source)
@@ -14,6 +11,5 @@ data/budgets.json
 data/recurring.json
 data/backup/
 
-# OS noise
 .DS_Store
 Thumbs.db
