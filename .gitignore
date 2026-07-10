@@ -1,27 +1,19 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
 
-# Virtual environments
+# Virtual environment
 .venv/
-venv/
-env/
 
-# Streamlit secrets
+# Streamlit secrets (never commit these)
 .streamlit/secrets.toml
 
-# IDE
-.vscode/
-.idea/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# User data — exclude real data files, keep folder structure via .gitkeep
+# User data (regenerated at runtime, not part of source)
 data/transactions.csv
 data/budgets.json
 data/recurring.json
 data/backup/
+
+# OS noise
+.DS_Store
+Thumbs.db
