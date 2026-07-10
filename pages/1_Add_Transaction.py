@@ -10,7 +10,8 @@ from datetime import date
 
 from utils import (
     load_data, append_rows, render_currency_selector,
-    ACCOUNTS, INCOME_CATS, EXPENSE_CATS,
+    ACCOUNTS, INCOME_CATS, EXPENSE_CATS, RECURRENCE_OPTS,
+    load_budgets, load_recurring, save_recurring, check_duplicate,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ st.divider()
 
 # Load existing transactions to extract custom entries dynamically
 df = load_data()
+budgets = load_budgets()
 
 # Extract unique accounts and categories dynamically
 used_accounts = []
@@ -69,7 +71,6 @@ used_categories = []
 if not df.empty:
     used_accounts = df["account"].dropna().unique().tolist()
     used_categories = df["category"].dropna().unique().tolist()
-    # Filter out empty or "Transfer" category
     used_categories = [c for c in used_categories if c and c != "Transfer"]
 
 # Build merged lists
@@ -79,7 +80,7 @@ accounts_list = sorted(list(set(ACCOUNTS + used_accounts)))
 tx_type = st.radio(
     "Transaction Type",
     ["Income", "Expense", "Transfer"],
-    index=1,          # default → Expense
+    index=1,
     horizontal=True,
     key="tx_type_radio",
     label_visibility="collapsed",
@@ -87,7 +88,7 @@ tx_type = st.radio(
 
 theme = THEMES[tx_type]
 
-# Coloured banner — changes with type
+# Coloured banner
 st.markdown(f"""
 <div style="
     background: linear-gradient(90deg, {theme['bg']}, transparent);
@@ -138,9 +139,17 @@ if tx_type == "Transfer":
             placeholder="Any additional details…",
             height=102, key="tx_desc",
         )
-    submit_label = f"↔  Add Transfer"
+    submit_label = "↔  Add Transfer"
     tx_cat = "Transfer"
     tx_acc = from_acc
+
+    # Recurring toggle (transfers can be recurring too)
+    st.divider()
+    is_recurring = st.checkbox("🔁 Make this a recurring transaction", key="tx_recurring")
+    if is_recurring:
+        recur_freq = st.selectbox("📆 Frequency", RECURRENCE_OPTS, key="tx_recur_freq")
+    else:
+        recur_freq = None
 
 else:
     defaults = INCOME_CATS if tx_type == "Income" else EXPENSE_CATS
@@ -187,9 +196,53 @@ else:
             height=102, key="tx_desc",
         )
 
+    # ── Budget hint for Expense ────────────────────────────────────────────────
+    if tx_type == "Expense" and tx_cat and tx_cat in budgets:
+        month_num = tx_date.month
+        year_num  = tx_date.year
+        if not df.empty:
+            spent = float(
+                df[
+                    (df["type"] == "Expense") &
+                    (df["category"] == tx_cat) &
+                    (df["date"].dt.month == month_num) &
+                    (df["date"].dt.year == year_num)
+                ]["amount"].sum()
+            )
+        else:
+            spent = 0.0
+        budget_limit = budgets[tx_cat]
+        new_spent    = spent + tx_amount
+        remaining    = budget_limit - new_spent
+        pct = new_spent / budget_limit if budget_limit > 0 else 0
+        if new_spent > budget_limit:
+            st.error(
+                f"⚠️ **Over budget!** Adding this will put **{tx_cat}** at "
+                f"{sym}{new_spent:,.2f} — **{sym}{abs(remaining):,.2f} over** your "
+                f"{sym}{budget_limit:,.2f} monthly limit."
+            )
+        elif pct >= 0.75:
+            st.warning(
+                f"🔶 **Near budget limit!** {tx_cat}: {sym}{new_spent:,.2f} / "
+                f"{sym}{budget_limit:,.2f} ({pct*100:.0f}%)"
+            )
+        else:
+            st.info(
+                f"💡 Budget for {tx_cat}: {sym}{spent:,.2f} spent · "
+                f"{sym}{remaining:,.2f} remaining of {sym}{budget_limit:,.2f}"
+            )
+
     icon = "📈" if tx_type == "Income" else "📉"
     submit_label = f"{icon}  Add {tx_type}"
     to_acc = ""
+
+    # Recurring toggle
+    st.divider()
+    is_recurring = st.checkbox("🔁 Make this a recurring transaction", key="tx_recurring")
+    if is_recurring:
+        recur_freq = st.selectbox("📆 Frequency", RECURRENCE_OPTS, key="tx_recur_freq")
+    else:
+        recur_freq = None
 
 st.divider()
 
@@ -208,6 +261,21 @@ if submitted:
     elif tx_type != "Transfer" and (not tx_cat or not tx_acc):
         st.error("Please enter names for both Category and Account.")
     else:
+        # ── Duplicate detection ────────────────────────────────────────────────
+        if check_duplicate(df, tx_type, tx_cat, tx_amount, tx_date):
+            st.warning(
+                f"⚠️ **Possible duplicate detected!** A similar **{tx_type}** of "
+                f"**{sym}{tx_amount:,.2f}** in **{tx_cat}** was already recorded "
+                f"within the last 7 days. If this is intentional, submit again to confirm.",
+                icon="⚠️",
+            )
+            # Use session state flag to allow second-click confirmation
+            if not st.session_state.get("dup_confirmed", False):
+                st.session_state["dup_confirmed"] = True
+                st.stop()
+
+        st.session_state["dup_confirmed"] = False
+
         row = dict(
             id=str(uuid.uuid4())[:8],
             date=str(tx_date),
@@ -222,7 +290,30 @@ if submitted:
         )
         append_rows([row])
 
-        if tx_type == "Transfer":
+        # ── Save recurring template if checked ────────────────────────────────
+        if is_recurring and recur_freq:
+            templates = load_recurring()
+            template = dict(
+                id=str(uuid.uuid4())[:8],
+                type=tx_type,
+                category=tx_cat,
+                account=tx_acc,
+                transfer_to=to_acc,
+                amount=tx_amount,
+                note=tx_note.strip(),
+                description=tx_desc.strip(),
+                frequency=recur_freq,
+                active=True,
+                created=str(date.today()),
+                last_run=str(tx_date),
+            )
+            templates.append(template)
+            save_recurring(templates)
+            st.success(
+                f"✅ Transaction recorded **and** saved as a **{recur_freq}** "
+                f"recurring template! Manage it on the Recurring page."
+            )
+        elif tx_type == "Transfer":
             st.success(
                 f"✅ Transfer of **{sym}{tx_amount:,.2f}** from "
                 f"**{from_acc}** → **{to_acc}** recorded!"

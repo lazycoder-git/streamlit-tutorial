@@ -19,3 +19,9 @@ env/
 # OS files
 .DS_Store
 Thumbs.db
+
+# User data — exclude real data files, keep folder structure via .gitkeep
+data/transactions.csv
+data/budgets.json
+data/recurring.json
+data/backup/

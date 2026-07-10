@@ -65,7 +65,6 @@ st.divider()
 
 # ── Metric cards ───────────────────────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns(4)
-bal_color = "normal" if balance >= 0 else "inverse"
 c1.metric("💳 Net Balance",     f"{sym}{balance:,.2f}")
 c2.metric("📈 Total Income",    f"{sym}{income:,.2f}")
 c3.metric("📉 Total Expenses",  f"{sym}{expenses:,.2f}")
@@ -170,7 +169,6 @@ if not df.empty:
     st.divider()
     st.subheader("🏦 Account Balances (All Time)")
 
-    # Compute per-account balance
     balances: dict[str, float] = {}
     for _, row in df.iterrows():
         acc = row["account"]
@@ -189,3 +187,86 @@ if not df.empty:
         cols = st.columns(len(balances))
         for col, (acc, bal) in zip(cols, sorted(balances.items())):
             col.metric(acc, f"{sym}{bal:,.2f}")
+
+# ── Year-to-Date Savings Chart ─────────────────────────────────────────────────
+if not df.empty:
+    st.divider()
+    st.subheader(f"📅 Year-to-Date Savings vs Goal — {int(sel_year)}")
+
+    ytd = []
+    for m in range(1, 13):
+        m_mask = (df["date"].dt.month == m) & (df["date"].dt.year == int(sel_year))
+        m_df   = df[m_mask]
+        m_inc  = float(m_df[m_df["type"] == "Income"]["amount"].sum()) if not m_df.empty else 0.0
+        m_exp  = float(m_df[m_df["type"] == "Expense"]["amount"].sum()) if not m_df.empty else 0.0
+        ytd.append({
+            "Month":    MONTHS[m - 1][:3],
+            "Savings":  round(m_inc - m_exp, 2),
+            "Goal":     savings_goal,
+            "is_future": m > now.month and int(sel_year) == now.year,
+        })
+
+    ytd_df = pd.DataFrame(ytd)
+    # Only plot up to current month for current year
+    if int(sel_year) == now.year:
+        ytd_plot = ytd_df[ytd_df["is_future"] == False].copy()
+    else:
+        ytd_plot = ytd_df.copy()
+
+    if not ytd_plot.empty and ytd_plot["Savings"].abs().sum() > 0:
+        fig_ytd = go.Figure()
+
+        # Savings bars (green if positive, red if negative)
+        colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in ytd_plot["Savings"]]
+        fig_ytd.add_trace(go.Bar(
+            x=ytd_plot["Month"], y=ytd_plot["Savings"],
+            name="Monthly Savings",
+            marker_color=colors,
+            opacity=0.85,
+            hovertemplate="<b>%{x}</b><br>Savings: " + sym + "%{y:,.2f}<extra></extra>",
+        ))
+
+        # Goal line
+        fig_ytd.add_trace(go.Scatter(
+            x=ytd_plot["Month"], y=ytd_plot["Goal"],
+            mode="lines",
+            name=f"Goal ({sym}{savings_goal:,.0f})",
+            line=dict(color="#FFD700", width=2, dash="dash"),
+            hovertemplate="Goal: " + sym + "%{y:,.2f}<extra></extra>",
+        ))
+
+        # Running cumulative savings line
+        ytd_plot = ytd_plot.copy()
+        ytd_plot["Cumulative"] = ytd_plot["Savings"].cumsum()
+        fig_ytd.add_trace(go.Scatter(
+            x=ytd_plot["Month"], y=ytd_plot["Cumulative"],
+            mode="lines+markers",
+            name="Cumulative Savings",
+            line=dict(color="#7C3AED", width=2.5),
+            marker=dict(size=7, color="#7C3AED"),
+            hovertemplate="<b>%{x}</b><br>Cumulative: " + sym + "%{y:,.2f}<extra></extra>",
+        ))
+
+        fig_ytd.update_layout(
+            plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="white"), height=320,
+            margin=dict(t=20, b=10, l=10, r=10),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)",
+                       title=f"Amount ({sym})"),
+            barmode="relative",
+        )
+        st.plotly_chart(fig_ytd, use_container_width=True)
+
+        # YTD summary
+        total_saved = float(ytd_plot["Savings"].sum())
+        months_done = len(ytd_plot)
+        ytd_c1, ytd_c2, ytd_c3 = st.columns(3)
+        ytd_c1.metric("💰 Total Saved YTD",   f"{sym}{total_saved:,.2f}")
+        ytd_c2.metric("📅 Months Tracked",    months_done)
+        ytd_c3.metric("🎯 Goal Progress",
+                      f"{(total_saved / (savings_goal * months_done) * 100):.1f}%"
+                      if savings_goal > 0 else "—")
+    else:
+        st.info(f"No income/expense data found for {int(sel_year)} yet.")

@@ -1,6 +1,10 @@
 """utils.py — Shared constants, data layer, and sidebar helpers for Money Tracker."""
 
 import os
+import json
+import shutil
+from datetime import datetime, timedelta
+
 import pandas as pd
 import streamlit as st
 
@@ -38,6 +42,8 @@ MONTHS = [
     "July", "August", "September", "October", "November", "December",
 ]
 
+RECURRENCE_OPTS = ["Daily", "Weekly", "Monthly"]
+
 # ─── CSV columns ──────────────────────────────────────────────────────────────
 COLUMNS = [
     "id", "date", "type", "category", "account",
@@ -45,15 +51,19 @@ COLUMNS = [
 ]
 
 # ─── File paths ───────────────────────────────────────────────────────────────
-_ROOT     = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR  = os.path.join(_ROOT, "data")
-DATA_FILE = os.path.join(DATA_DIR, "transactions.csv")
+_ROOT      = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR   = os.path.join(_ROOT, "data")
+DATA_FILE  = os.path.join(DATA_DIR, "transactions.csv")
+BACKUP_DIR = os.path.join(DATA_DIR, "backup")
+BUDGET_FILE    = os.path.join(DATA_DIR, "budgets.json")
+RECURRING_FILE = os.path.join(DATA_DIR, "recurring.json")
 
 
 # ─── Data I/O ─────────────────────────────────────────────────────────────────
 def ensure_data_file():
     """Create data/ dir and an empty CSV with headers if it doesn't exist."""
     os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(BACKUP_DIR, exist_ok=True)
     if not os.path.exists(DATA_FILE):
         pd.DataFrame(columns=COLUMNS).to_csv(DATA_FILE, index=False)
 
@@ -74,12 +84,25 @@ def load_data() -> pd.DataFrame:
     return df
 
 
+def auto_backup(df: pd.DataFrame):
+    """Copy current data to data/backup/YYYY-MM.csv (monthly snapshot)."""
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    stamp = datetime.now().strftime("%Y-%m")
+    dst   = os.path.join(BACKUP_DIR, f"transactions_{stamp}.csv")
+    out   = df.copy()
+    if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
+        out["date"] = out["date"].dt.strftime("%Y-%m-%d")
+    out.to_csv(dst, index=False)
+
+
 def save_dataframe(df: pd.DataFrame):
-    """Overwrite the CSV with the given DataFrame."""
+    """Overwrite the CSV with the given DataFrame and create a monthly backup."""
     out = df.copy()
     if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
         out["date"] = out["date"].dt.strftime("%Y-%m-%d")
     out.to_csv(DATA_FILE, index=False)
+    # Monthly auto-backup
+    auto_backup(df)
 
 
 def append_rows(rows: list[dict]):
@@ -88,6 +111,65 @@ def append_rows(rows: list[dict]):
     pd.DataFrame(rows, columns=COLUMNS).to_csv(
         DATA_FILE, mode="a", header=False, index=False
     )
+
+
+# ─── Duplicate detection ──────────────────────────────────────────────────────
+def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
+                    amount: float, tx_date, window_days: int = 7) -> bool:
+    """
+    Return True if a very similar transaction already exists within window_days.
+    Similarity = same type + category + amount (±1%) within the date window.
+    """
+    if df.empty:
+        return False
+    cutoff = pd.Timestamp(tx_date) - timedelta(days=window_days)
+    recent = df[df["date"] >= cutoff]
+    if recent.empty:
+        return False
+    matches = recent[
+        (recent["type"]     == tx_type) &
+        (recent["category"] == category) &
+        (recent["amount"].between(amount * 0.99, amount * 1.01))
+    ]
+    return len(matches) > 0
+
+
+# ─── Budget helpers ───────────────────────────────────────────────────────────
+def load_budgets() -> dict[str, float]:
+    """Load category budgets from JSON; returns {category: limit}."""
+    if not os.path.exists(BUDGET_FILE):
+        return {}
+    try:
+        with open(BUDGET_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def save_budgets(budgets: dict[str, float]):
+    """Persist category budgets to JSON."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(BUDGET_FILE, "w", encoding="utf-8") as f:
+        json.dump(budgets, f, indent=2)
+
+
+# ─── Recurring transaction helpers ────────────────────────────────────────────
+def load_recurring() -> list[dict]:
+    """Load recurring transaction templates from JSON."""
+    if not os.path.exists(RECURRING_FILE):
+        return []
+    try:
+        with open(RECURRING_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_recurring(templates: list[dict]):
+    """Persist recurring transaction templates to JSON."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(RECURRING_FILE, "w", encoding="utf-8") as f:
+        json.dump(templates, f, indent=2, default=str)
 
 
 # ─── Sidebar currency selector ────────────────────────────────────────────────
