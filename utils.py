@@ -1,4 +1,5 @@
 """utils.py — Shared constants, data layer, and sidebar helpers for Money Tracker."""
+# v2
 
 import os
 import json
