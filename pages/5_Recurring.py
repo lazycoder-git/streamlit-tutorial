@@ -11,6 +11,7 @@ from datetime import date
 from utils import (
     load_recurring, save_recurring, append_rows, get_symbol,
     RECURRENCE_OPTS,
+    inject_theme_css, render_theme_toggle,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -21,11 +22,16 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Inject theme CSS
+inject_theme_css()
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    st.divider()
+    render_theme_toggle()
 
 # ── Page header ────────────────────────────────────────────────────────────────
 st.title("🔁 Recurring Transactions")

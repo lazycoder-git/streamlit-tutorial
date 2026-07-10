@@ -10,7 +10,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-from utils import load_data, render_currency_selector, MONTHS
+from utils import (
+    load_data, render_currency_selector, MONTHS,
+    inject_theme_css, render_theme_toggle, is_first_run
+)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -19,6 +22,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Inject theme CSS
+inject_theme_css()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -40,6 +46,43 @@ with st.sidebar:
         min_value=0.0, value=5000.0, step=500.0, format="%.2f",
         key="dash_goal",
     )
+    st.divider()
+    render_theme_toggle()
+
+# ── Header ─────────────────────────────────────────────────────────────────────
+st.title("📊 Dashboard")
+
+# ── Onboarding / Welcome screen (First run) ────────────────────────────────────
+if is_first_run():
+    st.caption("Welcome to Money Tracker! Let's get you set up.")
+    st.divider()
+    
+    st.markdown(f"""
+<div style="
+    background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(124,58,237,0.05) 100%);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+">
+    <h3 style="margin-top: 0; color:#7C3AED;">🎉 Welcome to Your Personal Money Tracker!</h3>
+    <p>Track your income, expense, transfers, goals, and net worth all in one place. Follow these quick steps to get started:</p>
+</div>
+""", unsafe_allow_html=True)
+    
+    st.subheader("🏁 Quick Setup Guide")
+    
+    st.page_link("pages/1_Add_Transaction.py", label="Step 1: Add your first Transaction (Income or Expense)", icon="➕")
+    st.page_link("pages/4_Budgets.py", label="Step 2: Set monthly Category Budgets to control spending", icon="🎯")
+    st.page_link("pages/6_Goals.py", label="Step 3: Define your Savings Goals and Milestones", icon="💰")
+    st.page_link("pages/7_Debts.py", label="Step 4: Keep track of Loans and credit card EMIs", icon="💳")
+    st.page_link("pages/8_Net_Worth.py", label="Step 5: Check your consolidated Net Worth", icon="🏦")
+    
+    st.info("💡 Pro-Tip: You can change the base currency symbol and toggle Light/Dark mode directly from the sidebar on any page!")
+    st.stop()
+
+st.caption(f"Your financial overview for **{sel_month_name} {int(sel_year)}**")
+st.divider()
 
 # ── Load & filter data ─────────────────────────────────────────────────────────
 df = load_data()
@@ -57,11 +100,6 @@ income   = float(mdf[mdf["type"] == "Income"]["amount"].sum())   if not mdf.empt
 expenses = float(mdf[mdf["type"] == "Expense"]["amount"].sum())  if not mdf.empty else 0.0
 balance  = income - expenses
 sav_rate = (balance / income * 100) if income > 0 else 0.0
-
-# ── Header ─────────────────────────────────────────────────────────────────────
-st.title("📊 Dashboard")
-st.caption(f"Your financial overview for **{sel_month_name} {int(sel_year)}**")
-st.divider()
 
 # ── Metric cards ───────────────────────────────────────────────────────────────
 c1, c2, c3, c4 = st.columns(4)
@@ -126,7 +164,8 @@ with right:
         fig.update_layout(
             barmode="group",
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white"), height=220,
+            font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E"),
+            height=220,
             margin=dict(t=30, b=10, l=10, r=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
             yaxis=dict(showgrid=False, zeroline=False),
@@ -158,7 +197,8 @@ with right:
             )
             fig2.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"), height=300,
+                font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E"),
+                height=300,
                 margin=dict(t=10, b=10, l=10, r=10),
                 showlegend=False,
             )
@@ -207,7 +247,6 @@ if not df.empty:
         })
 
     ytd_df = pd.DataFrame(ytd)
-    # Only plot up to current month for current year
     if int(sel_year) == now.year:
         ytd_plot = ytd_df[ytd_df["is_future"] == False].copy()
     else:
@@ -216,7 +255,6 @@ if not df.empty:
     if not ytd_plot.empty and ytd_plot["Savings"].abs().sum() > 0:
         fig_ytd = go.Figure()
 
-        # Savings bars (green if positive, red if negative)
         colors = ["#2ecc71" if v >= 0 else "#e74c3c" for v in ytd_plot["Savings"]]
         fig_ytd.add_trace(go.Bar(
             x=ytd_plot["Month"], y=ytd_plot["Savings"],
@@ -226,7 +264,6 @@ if not df.empty:
             hovertemplate="<b>%{x}</b><br>Savings: " + sym + "%{y:,.2f}<extra></extra>",
         ))
 
-        # Goal line
         fig_ytd.add_trace(go.Scatter(
             x=ytd_plot["Month"], y=ytd_plot["Goal"],
             mode="lines",
@@ -235,7 +272,6 @@ if not df.empty:
             hovertemplate="Goal: " + sym + "%{y:,.2f}<extra></extra>",
         ))
 
-        # Running cumulative savings line
         ytd_plot = ytd_plot.copy()
         ytd_plot["Cumulative"] = ytd_plot["Savings"].cumsum()
         fig_ytd.add_trace(go.Scatter(
@@ -249,7 +285,8 @@ if not df.empty:
 
         fig_ytd.update_layout(
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white"), height=320,
+            font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E"),
+            height=320,
             margin=dict(t=20, b=10, l=10, r=10),
             legend=dict(orientation="h", yanchor="bottom", y=1.02),
             xaxis=dict(showgrid=False),
@@ -259,7 +296,6 @@ if not df.empty:
         )
         st.plotly_chart(fig_ytd, use_container_width=True)
 
-        # YTD summary
         total_saved = float(ytd_plot["Savings"].sum())
         months_done = len(ytd_plot)
         ytd_c1, ytd_c2, ytd_c3 = st.columns(3)

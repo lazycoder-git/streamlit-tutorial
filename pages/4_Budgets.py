@@ -12,6 +12,7 @@ from datetime import datetime
 from utils import (
     load_data, load_budgets, save_budgets, get_symbol,
     EXPENSE_CATS, MONTHS,
+    inject_theme_css, render_theme_toggle,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -22,11 +23,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Inject theme CSS
+inject_theme_css()
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    st.divider()
+    render_theme_toggle()
+    st.divider()
 
     now = datetime.now()
     sel_month_name = st.selectbox("📅 Month", MONTHS, index=now.month - 1, key="bud_month")

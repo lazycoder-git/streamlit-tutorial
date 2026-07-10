@@ -9,6 +9,9 @@ __pycache__/
 data/transactions.csv
 data/budgets.json
 data/recurring.json
+data/goals.json
+data/debts.json
+data/assets.json
 data/backup/
 
 .DS_Store

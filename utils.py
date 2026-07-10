@@ -44,6 +44,9 @@ MONTHS = [
 
 RECURRENCE_OPTS = ["Daily", "Weekly", "Monthly"]
 
+GOAL_EMOJIS = ["🏠", "✈️", "🚗", "💻", "📱", "🎓", "💍", "🏖️", "🏋️", "🎯",
+               "💰", "🛍️", "🎸", "📷", "⌚", "🌍", "🏥", "🎉", "🐾", "🌱"]
+
 # ─── CSV columns ──────────────────────────────────────────────────────────────
 COLUMNS = [
     "id", "date", "type", "category", "account",
@@ -51,12 +54,14 @@ COLUMNS = [
 ]
 
 # ─── File paths ───────────────────────────────────────────────────────────────
-_ROOT      = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR   = os.path.join(_ROOT, "data")
-DATA_FILE  = os.path.join(DATA_DIR, "transactions.csv")
-BACKUP_DIR = os.path.join(DATA_DIR, "backup")
+_ROOT          = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR       = os.path.join(_ROOT, "data")
+DATA_FILE      = os.path.join(DATA_DIR, "transactions.csv")
+BACKUP_DIR     = os.path.join(DATA_DIR, "backup")
 BUDGET_FILE    = os.path.join(DATA_DIR, "budgets.json")
 RECURRING_FILE = os.path.join(DATA_DIR, "recurring.json")
+GOALS_FILE     = os.path.join(DATA_DIR, "goals.json")
+DEBTS_FILE     = os.path.join(DATA_DIR, "debts.json")
 
 
 # ─── Data I/O ─────────────────────────────────────────────────────────────────
@@ -84,6 +89,17 @@ def load_data() -> pd.DataFrame:
     return df
 
 
+def is_first_run() -> bool:
+    """Return True when the app has no transaction data yet."""
+    if not os.path.exists(DATA_FILE):
+        return True
+    try:
+        df = pd.read_csv(DATA_FILE, dtype=str)
+        return df.empty
+    except Exception:
+        return True
+
+
 def auto_backup(df: pd.DataFrame):
     """Copy current data to data/backup/YYYY-MM.csv (monthly snapshot)."""
     os.makedirs(BACKUP_DIR, exist_ok=True)
@@ -101,7 +117,6 @@ def save_dataframe(df: pd.DataFrame):
     if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
         out["date"] = out["date"].dt.strftime("%Y-%m-%d")
     out.to_csv(DATA_FILE, index=False)
-    # Monthly auto-backup
     auto_backup(df)
 
 
@@ -116,10 +131,7 @@ def append_rows(rows: list[dict]):
 # ─── Duplicate detection ──────────────────────────────────────────────────────
 def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
                     amount: float, tx_date, window_days: int = 7) -> bool:
-    """
-    Return True if a very similar transaction already exists within window_days.
-    Similarity = same type + category + amount (±1%) within the date window.
-    """
+    """Return True if a very similar transaction exists within window_days."""
     if df.empty:
         return False
     cutoff = pd.Timestamp(tx_date) - timedelta(days=window_days)
@@ -136,7 +148,6 @@ def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
 
 # ─── Budget helpers ───────────────────────────────────────────────────────────
 def load_budgets() -> dict[str, float]:
-    """Load category budgets from JSON; returns {category: limit}."""
     if not os.path.exists(BUDGET_FILE):
         return {}
     try:
@@ -147,7 +158,6 @@ def load_budgets() -> dict[str, float]:
 
 
 def save_budgets(budgets: dict[str, float]):
-    """Persist category budgets to JSON."""
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(BUDGET_FILE, "w", encoding="utf-8") as f:
         json.dump(budgets, f, indent=2)
@@ -155,7 +165,6 @@ def save_budgets(budgets: dict[str, float]):
 
 # ─── Recurring transaction helpers ────────────────────────────────────────────
 def load_recurring() -> list[dict]:
-    """Load recurring transaction templates from JSON."""
     if not os.path.exists(RECURRING_FILE):
         return []
     try:
@@ -166,10 +175,117 @@ def load_recurring() -> list[dict]:
 
 
 def save_recurring(templates: list[dict]):
-    """Persist recurring transaction templates to JSON."""
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(RECURRING_FILE, "w", encoding="utf-8") as f:
         json.dump(templates, f, indent=2, default=str)
+
+
+# ─── Goals helpers ────────────────────────────────────────────────────────────
+def load_goals() -> list[dict]:
+    """Load financial goals from JSON."""
+    if not os.path.exists(GOALS_FILE):
+        return []
+    try:
+        with open(GOALS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_goals(goals: list[dict]):
+    """Persist financial goals to JSON."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(GOALS_FILE, "w", encoding="utf-8") as f:
+        json.dump(goals, f, indent=2, default=str)
+
+
+# ─── Debt helpers ─────────────────────────────────────────────────────────────
+def load_debts() -> list[dict]:
+    """Load debt records from JSON."""
+    if not os.path.exists(DEBTS_FILE):
+        return []
+    try:
+        with open(DEBTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def save_debts(debts: list[dict]):
+    """Persist debt records to JSON."""
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(DEBTS_FILE, "w", encoding="utf-8") as f:
+        json.dump(debts, f, indent=2, default=str)
+
+
+# ─── Theme helpers ────────────────────────────────────────────────────────────
+_LIGHT_CSS = """
+<style>
+/* ── Light mode overrides ── */
+[data-testid="stApp"],
+[data-testid="stAppViewContainer"] > .main {
+    background-color: #F4F6FB !important;
+    color: #1A1A2E !important;
+}
+[data-testid="stSidebar"] {
+    background-color: #FFFFFF !important;
+}
+[data-testid="stSidebar"] * {
+    color: #1A1A2E !important;
+}
+[data-testid="stHeader"] {
+    background-color: #F4F6FB !important;
+}
+[data-testid="metric-container"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E0E4EF !important;
+    border-radius: 10px;
+    padding: 12px !important;
+}
+[data-testid="stDataFrame"] {
+    background-color: #FFFFFF !important;
+}
+.stTabs [data-baseweb="tab-panel"] {
+    background-color: #F4F6FB !important;
+}
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3 {
+    color: #1A1A2E !important;
+}
+div[data-testid="stForm"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E0E4EF !important;
+    border-radius: 10px;
+}
+</style>
+"""
+
+_DARK_CSS = """
+<style>
+/* ── Restore dark mode (no-op if config.toml already sets it) ── */
+</style>
+"""
+
+
+def inject_theme_css():
+    """Inject light or dark CSS based on session_state theme preference."""
+    theme = st.session_state.get("theme", "dark")
+    if theme == "light":
+        st.markdown(_LIGHT_CSS, unsafe_allow_html=True)
+    else:
+        st.markdown(_DARK_CSS, unsafe_allow_html=True)
+
+
+def render_theme_toggle():
+    """Render a single toggle button for dark/light mode in the sidebar."""
+    theme = st.session_state.get("theme", "dark")
+    label = "☀️ Light Mode" if theme == "dark" else "🌙 Dark Mode"
+    if st.button(label, key="theme_toggle_btn", use_container_width=True):
+        st.session_state["theme"] = "light" if theme == "dark" else "dark"
+        st.rerun()
 
 
 # ─── Sidebar currency selector ────────────────────────────────────────────────

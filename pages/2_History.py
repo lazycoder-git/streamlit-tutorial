@@ -13,6 +13,7 @@ import pandas as pd
 from utils import (
     load_data, save_dataframe, get_symbol,
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS, COLUMNS,
+    inject_theme_css, render_theme_toggle,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -23,6 +24,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Inject theme CSS
+inject_theme_css()
+
 ALL_CATS = sorted(set(INCOME_CATS + EXPENSE_CATS + ["Transfer"]))
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
@@ -30,6 +34,9 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    st.divider()
+    render_theme_toggle()
+    st.divider()
 
     st.subheader("🔍 Filters")
 

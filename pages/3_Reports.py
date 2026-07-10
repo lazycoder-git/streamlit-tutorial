@@ -11,7 +11,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
-from utils import load_data, get_symbol, MONTHS, EXPENSE_CATS
+from utils import (
+    load_data, get_symbol, MONTHS, EXPENSE_CATS,
+    inject_theme_css, render_theme_toggle,
+)
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -21,11 +24,17 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Inject theme CSS
+inject_theme_css()
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    st.divider()
+    render_theme_toggle()
+    st.divider()
 
     now = datetime.now()
     sel_month = st.selectbox("📅 Month", MONTHS, index=now.month - 1, key="rep_month")
