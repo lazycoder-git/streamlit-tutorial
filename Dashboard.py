@@ -12,7 +12,7 @@ from datetime import datetime
 
 from utils import (
     load_data, render_currency_selector, MONTHS,
-    inject_theme_css, render_theme_toggle, is_first_run
+    is_first_run
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -23,8 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Inject theme CSS
-inject_theme_css()
+
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -46,8 +45,7 @@ with st.sidebar:
         min_value=0.0, value=5000.0, step=500.0, format="%.2f",
         key="dash_goal",
     )
-    st.divider()
-    render_theme_toggle()
+
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("📊 Dashboard")

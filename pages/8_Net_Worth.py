@@ -11,8 +11,7 @@ import plotly.graph_objects as go
 from datetime import date, datetime
 
 from utils import (
-    load_data, load_debts, get_symbol,
-    inject_theme_css, render_theme_toggle, DATA_DIR
+    load_data, load_debts, get_symbol, DATA_DIR
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -23,15 +22,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Inject theme CSS
-inject_theme_css()
+
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
-    render_theme_toggle()
 
 st.title("🏦 Net Worth Tracker")
 st.caption("Calculate your total net worth by combining account balances, physical assets, and current liabilities.")

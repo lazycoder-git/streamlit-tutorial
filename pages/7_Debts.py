@@ -12,7 +12,6 @@ from datetime import date, datetime
 
 from utils import (
     load_debts, save_debts, append_rows, get_symbol,
-    inject_theme_css, render_theme_toggle,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -23,15 +22,13 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Inject theme CSS
-inject_theme_css()
+
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
-    render_theme_toggle()
 
 st.title("💸 Debt & EMI Tracker")
 st.caption("Manage loans, credit card payoffs, EMIs, and visualize your debt-free journey.")

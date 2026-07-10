@@ -12,7 +12,6 @@ from utils import (
     load_data, append_rows, render_currency_selector,
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS, RECURRENCE_OPTS,
     load_budgets, load_recurring, save_recurring, check_duplicate,
-    inject_theme_css, render_theme_toggle,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -23,16 +22,14 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Inject theme CSS
-inject_theme_css()
+
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = render_currency_selector()
-    st.divider()
-    render_theme_toggle()
+
 
 # ── Type themes ────────────────────────────────────────────────────────────────
 THEMES = {
