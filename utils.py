@@ -230,7 +230,8 @@ _LIGHT_CSS = """
 [data-testid="stSidebar"] {
     background-color: #FFFFFF !important;
 }
-[data-testid="stSidebar"] * {
+[data-testid="stSidebar"] *,
+[data-testid="stSidebarNav"] * {
     color: #1A1A2E !important;
 }
 [data-testid="stHeader"] {
@@ -242,23 +243,60 @@ _LIGHT_CSS = """
     border-radius: 10px;
     padding: 12px !important;
 }
+[data-testid="stMetricLabel"] > div,
+[data-testid="stMetricValue"] > div {
+    color: #1A1A2E !important;
+}
 [data-testid="stDataFrame"] {
     background-color: #FFFFFF !important;
 }
 .stTabs [data-baseweb="tab-panel"] {
     background-color: #F4F6FB !important;
 }
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] li,
-[data-testid="stMarkdownContainer"] h1,
-[data-testid="stMarkdownContainer"] h2,
-[data-testid="stMarkdownContainer"] h3 {
+h1, h2, h3, h4, h5, h6, p, li, span, label,
+[data-testid="stMarkdownContainer"] * {
     color: #1A1A2E !important;
 }
 div[data-testid="stForm"] {
     background-color: #FFFFFF !important;
     border: 1px solid #E0E4EF !important;
     border-radius: 10px;
+}
+input, textarea, select, [data-baseweb="select"] * {
+    color: #1A1A2E !important;
+    background-color: #FFFFFF !important;
+}
+button[kind="secondary"],
+[data-testid="stBaseButton-secondary"] {
+    background-color: #FFFFFF !important;
+    color: #1A1A2E !important;
+    border: 1px solid #C0C4DF !important;
+}
+button[kind="secondary"]:hover,
+[data-testid="stBaseButton-secondary"]:hover {
+    border-color: #7C3AED !important;
+    color: #7C3AED !important;
+}
+button[kind="primary"],
+[data-testid="stBaseButton-primary"] {
+    background-color: #7C3AED !important;
+    color: #FFFFFF !important;
+    border: none !important;
+}
+button[kind="primary"]:hover,
+[data-testid="stBaseButton-primary"]:hover {
+    background-color: #6D28D9 !important;
+    color: #FFFFFF !important;
+}
+[data-testid="stExpander"] details summary {
+    background-color: #FFFFFF !important;
+    color: #1A1A2E !important;
+}
+.stAlert * {
+    color: #1A1A2E !important;
+}
+[data-testid="stDataFrame"] * {
+    color: #1A1A2E !important;
 }
 </style>
 """
