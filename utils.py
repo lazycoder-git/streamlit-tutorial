@@ -225,60 +225,90 @@ _LIGHT_CSS = """
 [data-testid="stApp"],
 [data-testid="stAppViewContainer"] > .main {
     background-color: #F4F6FB !important;
+}
+
+/* Base text elements */
+h1, h2, h3, h4, h5, h6, p, li, span, label, div, a, small {
     color: #1A1A2E !important;
 }
-[data-testid="stSidebar"] {
+
+/* Sidebar navigation */
+[data-testid="stSidebar"],
+[data-testid="stSidebarNav"] * {
+    background-color: #FFFFFF !important;
+    color: #1A1A2E !important;
+}
+
+/* Forms and containers */
+div[data-testid="stForm"] {
+    background-color: #FFFFFF !important;
+    border: 1px solid #E0E4EF !important;
+}
+
+/* Form input fields, text areas, dropdowns, calendars, and portal menus */
+input, textarea, select, 
+[data-baseweb="select"] *, 
+[data-baseweb="popover"] *,
+[role="option"] *,
+[role="listbox"] *,
+span[data-baseweb="tag"] * {
+    color: #1A1A2E !important;
     background-color: #FFFFFF !important;
 }
-[data-testid="stSidebar"] *,
-[data-testid="stSidebarNav"] * {
-    color: #1A1A2E !important;
+
+/* Multi-select tags */
+span[data-baseweb="tag"] {
+    background-color: #E0E4EF !important;
 }
-[data-testid="stHeader"] {
-    background-color: #F4F6FB !important;
-}
+
+/* Metric cards */
 [data-testid="metric-container"] {
     background-color: #FFFFFF !important;
     border: 1px solid #E0E4EF !important;
     border-radius: 10px;
     padding: 12px !important;
 }
-[data-testid="stMetricLabel"] > div,
-[data-testid="stMetricValue"] > div {
+[data-testid="stMetricLabel"] *,
+[data-testid="stMetricValue"] * {
     color: #1A1A2E !important;
 }
-[data-testid="stDataFrame"] {
-    background-color: #FFFFFF !important;
-}
-.stTabs [data-baseweb="tab-panel"] {
-    background-color: #F4F6FB !important;
-}
-h1, h2, h3, h4, h5, h6, p, li, span, label,
-[data-testid="stMarkdownContainer"] * {
+
+/* Expander headers */
+[data-testid="stExpander"] details summary * {
     color: #1A1A2E !important;
 }
-div[data-testid="stForm"] {
-    background-color: #FFFFFF !important;
-    border: 1px solid #E0E4EF !important;
-    border-radius: 10px;
-}
-input, textarea, select, [data-baseweb="select"] * {
+
+/* Notification and alert callouts */
+[data-testid="stNotification"] *,
+.stAlert * {
     color: #1A1A2E !important;
-    background-color: #FFFFFF !important;
 }
-button[kind="secondary"],
-[data-testid="stBaseButton-secondary"] {
+
+/* Tables and dataframes */
+[data-testid="stDataFrame"] *,
+[data-testid="stTable"] *,
+table * {
+    color: #1A1A2E !important;
+}
+
+/* General button secondary style */
+button,
+[data-testid="stBaseButton-secondary"],
+[data-testid="stBaseButton-secondary"] * {
     background-color: #FFFFFF !important;
     color: #1A1A2E !important;
-    border: 1px solid #C0C4DF !important;
+    border-color: #C0C4DF !important;
 }
-button[kind="secondary"]:hover,
+button:hover,
 [data-testid="stBaseButton-secondary"]:hover {
     border-color: #7C3AED !important;
     color: #7C3AED !important;
 }
+
+/* Primary buttons */
 button[kind="primary"],
-[data-testid="stBaseButton-primary"] {
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-primary"] * {
     background-color: #7C3AED !important;
     color: #FFFFFF !important;
     border: none !important;
@@ -287,16 +317,6 @@ button[kind="primary"]:hover,
 [data-testid="stBaseButton-primary"]:hover {
     background-color: #6D28D9 !important;
     color: #FFFFFF !important;
-}
-[data-testid="stExpander"] details summary {
-    background-color: #FFFFFF !important;
-    color: #1A1A2E !important;
-}
-.stAlert * {
-    color: #1A1A2E !important;
-}
-[data-testid="stDataFrame"] * {
-    color: #1A1A2E !important;
 }
 </style>
 """
