@@ -13,8 +13,39 @@ _CREDS_FILE = os.path.join(_ROOT, "credentials.yaml")
 def _get_authenticator() -> stauth.Authenticate:
     """Load or retrieve cached authenticator from session state."""
     if "_mt_authenticator" not in st.session_state:
-        with open(_CREDS_FILE, encoding="utf-8") as f:
-            config = yaml.load(f, Loader=SafeLoader)
+        # 1. Try loading from Streamlit secrets first (useful for secure cloud deployment)
+        if "credentials" in st.secrets and "cookie" in st.secrets:
+            config = {
+                "credentials": st.secrets["credentials"],
+                "cookie": st.secrets["cookie"]
+            }
+        else:
+            # 2. Fallback to credentials.yaml, auto-generating it if missing
+            if not os.path.exists(_CREDS_FILE):
+                default_config = {
+                    "credentials": {
+                        "usernames": {
+                            "ghost": {
+                                "email": "ghost@example.com",
+                                "failed_login_attempts": 0,
+                                "logged_in": False,
+                                "name": "Ghost",
+                                "password": "$2b$12$SaWrBuP6.o3MMTvVZ0ZTyeRr2tMNvfoWVL9dc/qsagW34h53REnxy"
+                            }
+                        }
+                    },
+                    "cookie": {
+                        "expiry_days": 30.0,
+                        "key": "money_tracker_secret_key_xk92bv",
+                        "name": "money_tracker_auth"
+                    }
+                }
+                with open(_CREDS_FILE, "w", encoding="utf-8") as f:
+                    yaml.dump(default_config, f)
+
+            with open(_CREDS_FILE, encoding="utf-8") as f:
+                config = yaml.load(f, Loader=SafeLoader)
+
         st.session_state["_mt_authenticator"] = stauth.Authenticate(
             config["credentials"],
             config["cookie"]["name"],
