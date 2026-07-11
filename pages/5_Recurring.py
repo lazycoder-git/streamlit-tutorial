@@ -22,8 +22,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-
 # ── Auth gate ──────────────────────────────────────────────────────────────────
 require_login()
 
@@ -32,7 +30,6 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
-
 
 # ── Page header ────────────────────────────────────────────────────────────────
 st.title("🔁 Recurring Transactions")
@@ -181,7 +178,6 @@ def render_template_card(tpl: dict, idx: int, is_active: bool):
             save_recurring(templates)
             st.success("Template deleted.")
             st.rerun()
-
 
 # ── Render ACTIVE templates ────────────────────────────────────────────────────
 st.subheader(f"✅ Active Templates ({len(active_tpls)})")

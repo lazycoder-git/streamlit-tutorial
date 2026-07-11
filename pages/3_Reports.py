@@ -24,8 +24,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-
 # ── Auth gate ──────────────────────────────────────────────────────────────────
 require_login()
 
@@ -64,7 +62,6 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🗓️ Heatmap",
     "📉 Category Trend",
 ])
-
 
 # ─── TAB 1: Monthly breakdown ──────────────────────────────────────────────────
 with tab1:
@@ -130,7 +127,6 @@ with tab1:
                 st.plotly_chart(fig2, use_container_width=True)
             else:
                 st.info("No income data for this month.")
-
 
 # ─── TAB 2: Trends ────────────────────────────────────────────────────────────
 with tab2:
@@ -203,7 +199,6 @@ with tab2:
             st.plotly_chart(fig4, use_container_width=True)
         else:
             st.info("Not enough data for 6-month comparison.")
-
 
 # ─── TAB 3: Insights ──────────────────────────────────────────────────────────
 with tab3:
@@ -294,7 +289,6 @@ with tab3:
                         for k, v in sorted(balances.items())]
             st.dataframe(pd.DataFrame(bal_rows), use_container_width=True, hide_index=True)
 
-
 # ─── TAB 4: Day-of-Week Spending Heatmap ──────────────────────────────────────
 with tab4:
     st.subheader("🗓️ Spending Heatmap — Day of Week × Week of Month")
@@ -383,7 +377,6 @@ with tab4:
                 xaxis=dict(showgrid=False),
             )
             st.plotly_chart(fig_dow, use_container_width=True)
-
 
 # ─── TAB 5: Category Trend ────────────────────────────────────────────────────
 with tab5:

@@ -3,7 +3,6 @@
 
 import os
 import json
-import shutil
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -58,10 +57,6 @@ COLUMNS = [
 _ROOT          = os.path.dirname(os.path.abspath(__file__))
 _BASE_DATA_DIR = os.path.join(_ROOT, "data")
 
-# DATA_DIR kept for backwards compatibility (imported by 8_Net_Worth.py)
-DATA_DIR = _BASE_DATA_DIR
-
-
 # ─── Per-user data directory ──────────────────────────────────────────────────
 def get_user_data_dir() -> str:
     """Return and create the data directory for the currently logged-in user."""
@@ -70,7 +65,6 @@ def get_user_data_dir() -> str:
     os.makedirs(d, exist_ok=True)
     os.makedirs(os.path.join(d, "backup"), exist_ok=True)
     return d
-
 
 # ─── Internal path helpers ────────────────────────────────────────────────────
 def _data_file()      -> str: return os.path.join(get_user_data_dir(), "transactions.csv")
@@ -81,14 +75,12 @@ def _goals_file()     -> str: return os.path.join(get_user_data_dir(), "goals.js
 def _debts_file()     -> str: return os.path.join(get_user_data_dir(), "debts.json")
 def _assets_file()    -> str: return os.path.join(get_user_data_dir(), "assets.json")
 
-
 # ─── Data I/O ─────────────────────────────────────────────────────────────────
 def ensure_data_file():
     """Create the user's data dir and an empty CSV with headers if missing."""
     data_file = _data_file()
     if not os.path.exists(data_file):
         pd.DataFrame(columns=COLUMNS).to_csv(data_file, index=False)
-
 
 def load_data() -> pd.DataFrame:
     """Load and type-cast the transactions CSV for the current user."""
@@ -105,7 +97,6 @@ def load_data() -> pd.DataFrame:
         df[col] = df.get(col, pd.Series(dtype=str)).fillna("")
     return df
 
-
 def is_first_run() -> bool:
     """Return True when the current user has no transaction data yet."""
     f = _data_file()
@@ -117,7 +108,6 @@ def is_first_run() -> bool:
     except Exception:
         return True
 
-
 def auto_backup(df: pd.DataFrame):
     """Copy current data to backup/YYYY-MM.csv (monthly snapshot)."""
     stamp = datetime.now().strftime("%Y-%m")
@@ -127,7 +117,6 @@ def auto_backup(df: pd.DataFrame):
         out["date"] = out["date"].dt.strftime("%Y-%m-%d")
     out.to_csv(dst, index=False)
 
-
 def save_dataframe(df: pd.DataFrame):
     """Overwrite the CSV with the given DataFrame and create a monthly backup."""
     out = df.copy()
@@ -136,14 +125,12 @@ def save_dataframe(df: pd.DataFrame):
     out.to_csv(_data_file(), index=False)
     auto_backup(df)
 
-
 def append_rows(rows: list[dict]):
     """Append one or more row dicts to the CSV."""
     ensure_data_file()
     pd.DataFrame(rows, columns=COLUMNS).to_csv(
         _data_file(), mode="a", header=False, index=False
     )
-
 
 # ─── Duplicate detection ──────────────────────────────────────────────────────
 def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
@@ -162,7 +149,6 @@ def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
     ]
     return len(matches) > 0
 
-
 # ─── Budget helpers ───────────────────────────────────────────────────────────
 def load_budgets() -> dict[str, float]:
     f = _budget_file()
@@ -174,11 +160,9 @@ def load_budgets() -> dict[str, float]:
     except Exception:
         return {}
 
-
 def save_budgets(budgets: dict[str, float]):
     with open(_budget_file(), "w", encoding="utf-8") as fp:
         json.dump(budgets, fp, indent=2)
-
 
 # ─── Recurring transaction helpers ────────────────────────────────────────────
 def load_recurring() -> list[dict]:
@@ -191,11 +175,9 @@ def load_recurring() -> list[dict]:
     except Exception:
         return []
 
-
 def save_recurring(templates: list[dict]):
     with open(_recurring_file(), "w", encoding="utf-8") as fp:
         json.dump(templates, fp, indent=2, default=str)
-
 
 # ─── Goals helpers ────────────────────────────────────────────────────────────
 def load_goals() -> list[dict]:
@@ -209,12 +191,10 @@ def load_goals() -> list[dict]:
     except Exception:
         return []
 
-
 def save_goals(goals: list[dict]):
     """Persist financial goals to JSON."""
     with open(_goals_file(), "w", encoding="utf-8") as fp:
         json.dump(goals, fp, indent=2, default=str)
-
 
 # ─── Debt helpers ─────────────────────────────────────────────────────────────
 def load_debts() -> list[dict]:
@@ -228,12 +208,10 @@ def load_debts() -> list[dict]:
     except Exception:
         return []
 
-
 def save_debts(debts: list[dict]):
     """Persist debt records to JSON."""
     with open(_debts_file(), "w", encoding="utf-8") as fp:
         json.dump(debts, fp, indent=2, default=str)
-
 
 # ─── Assets helpers ───────────────────────────────────────────────────────────
 def load_assets() -> dict[str, float]:
@@ -247,12 +225,10 @@ def load_assets() -> dict[str, float]:
     except Exception:
         return {}
 
-
 def save_assets(assets: dict[str, float]):
     """Persist manual assets to JSON."""
     with open(_assets_file(), "w", encoding="utf-8") as fp:
         json.dump(assets, fp, indent=2)
-
 
 # ─── Sidebar currency selector ────────────────────────────────────────────────
 def render_currency_selector() -> str:
@@ -267,7 +243,6 @@ def render_currency_selector() -> str:
     sym = CURRENCIES[chosen]
     st.session_state["currency_symbol"] = sym
     return sym
-
 
 def get_symbol() -> str:
     return st.session_state.get("currency_symbol", "₹")

@@ -23,7 +23,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
 # ── Auth gate ──────────────────────────────────────────────────────────────────
 require_login()
 
@@ -32,7 +31,6 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = render_currency_selector()
-
 
 # ── Type themes ────────────────────────────────────────────────────────────────
 THEMES = {

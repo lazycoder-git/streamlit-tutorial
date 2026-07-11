@@ -24,8 +24,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-
 # ── Auth gate ──────────────────────────────────────────────────────────────────
 require_login()
 
@@ -49,7 +47,6 @@ with st.sidebar:
         min_value=0.0, value=5000.0, step=500.0, format="%.2f",
         key="dash_goal",
     )
-
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("📊 Dashboard")

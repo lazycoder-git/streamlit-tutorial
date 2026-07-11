@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from datetime import date, datetime
 
 from utils import (
-    load_data, load_debts, get_symbol, load_assets, save_assets, get_user_data_dir
+    load_data, load_debts, get_symbol, load_assets, save_assets
 )
 from auth import require_login
 
@@ -21,8 +21,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-
 
 # ── Auth gate ──────────────────────────────────────────────────────────────────
 require_login()

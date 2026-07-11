@@ -24,8 +24,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-
 ALL_CATS = sorted(set(INCOME_CATS + EXPENSE_CATS + ["Transfer"]))
 
 # ── Auth gate ──────────────────────────────────────────────────────────────────
@@ -63,7 +61,6 @@ with st.sidebar:
 
     sel_cats = st.multiselect("Category", cat_opts, key="h_cats")
     sel_accs = st.multiselect("Account",  ACCOUNTS, key="h_accs")
-
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 df = load_data()
