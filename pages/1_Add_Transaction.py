@@ -10,8 +10,8 @@ from datetime import date
 
 from utils import (
     load_data, append_rows, render_currency_selector,
-    ACCOUNTS, INCOME_CATS, EXPENSE_CATS, RECURRENCE_OPTS,
-    load_budgets, load_recurring, save_recurring, check_duplicate,
+    ACCOUNTS, INCOME_CATS, EXPENSE_CATS,
+    load_budgets, check_duplicate,
 )
 
 # ── Page config ────────────────────────────────────────────────────────────────
@@ -146,13 +146,8 @@ if tx_type == "Transfer":
     tx_cat = "Transfer"
     tx_acc = from_acc
 
-    # Recurring toggle (transfers can be recurring too)
-    st.divider()
-    is_recurring = st.checkbox("🔁 Make this a recurring transaction", key="tx_recurring")
-    if is_recurring:
-        recur_freq = st.selectbox("📆 Frequency", RECURRENCE_OPTS, key="tx_recur_freq")
-    else:
-        recur_freq = None
+    is_recurring = False
+    recur_freq = None
 
 else:
     defaults = INCOME_CATS if tx_type == "Income" else EXPENSE_CATS
@@ -239,13 +234,8 @@ else:
     submit_label = f"{icon}  Add {tx_type}"
     to_acc = ""
 
-    # Recurring toggle
-    st.divider()
-    is_recurring = st.checkbox("🔁 Make this a recurring transaction", key="tx_recurring")
-    if is_recurring:
-        recur_freq = st.selectbox("📆 Frequency", RECURRENCE_OPTS, key="tx_recur_freq")
-    else:
-        recur_freq = None
+    is_recurring = False
+    recur_freq = None
 
 st.divider()
 
@@ -293,30 +283,7 @@ if submitted:
         )
         append_rows([row])
 
-        # ── Save recurring template if checked ────────────────────────────────
-        if is_recurring and recur_freq:
-            templates = load_recurring()
-            template = dict(
-                id=str(uuid.uuid4())[:8],
-                type=tx_type,
-                category=tx_cat,
-                account=tx_acc,
-                transfer_to=to_acc,
-                amount=tx_amount,
-                note=tx_note.strip(),
-                description=tx_desc.strip(),
-                frequency=recur_freq,
-                active=True,
-                created=str(date.today()),
-                last_run=str(tx_date),
-            )
-            templates.append(template)
-            save_recurring(templates)
-            st.success(
-                f"✅ Transaction recorded **and** saved as a **{recur_freq}** "
-                f"recurring template! Manage it on the Recurring page."
-            )
-        elif tx_type == "Transfer":
+        if tx_type == "Transfer":
             st.success(
                 f"✅ Transfer of **{sym}{tx_amount:,.2f}** from "
                 f"**{from_acc}** → **{to_acc}** recorded!"
