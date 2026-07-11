@@ -13,9 +13,16 @@ def get_firestore_client():
     """Initialize Firebase App if not already done, and return db client."""
     if not firebase_admin._apps:
         # 1. Check Streamlit Cloud secrets first
-        if "firebase" in st.secrets:
+        creds_dict = None
+        try:
+            if "firebase" in st.secrets:
+                creds_dict = dict(st.secrets["firebase"])
+        except Exception:
+            # Streamlit secrets file not found or firebase not in secrets
+            pass
+
+        if creds_dict:
             # We recreate a dictionary from secrets to bypass any AttrDict wrapping
-            creds_dict = dict(st.secrets["firebase"])
             # Some properties like private_key can contain escaped newlines when configured as a secret string.
             # We must fix them so they are parsed correctly by Google OAuth library.
             if "private_key" in creds_dict:

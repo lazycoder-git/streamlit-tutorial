@@ -43,9 +43,15 @@ def _get_authenticator() -> stauth.Authenticate:
         creds = _load_credentials_from_firebase()
         
         # Read cookie config from Streamlit secrets, or use defaults
-        cookie_name = st.secrets.get("cookie", {}).get("name", "money_tracker_auth")
-        cookie_key = st.secrets.get("cookie", {}).get("key", "money_tracker_secret_key_xk92bv")
-        cookie_expiry = float(st.secrets.get("cookie", {}).get("expiry_days", 30.0))
+        cookie_config = {}
+        try:
+            cookie_config = st.secrets.get("cookie", {})
+        except Exception:
+            pass
+
+        cookie_name = cookie_config.get("name", "money_tracker_auth")
+        cookie_key = cookie_config.get("key", "money_tracker_secret_key_xk92bv")
+        cookie_expiry = float(cookie_config.get("expiry_days", 30.0))
 
         st.session_state["_mt_authenticator"] = stauth.Authenticate(
             creds,

@@ -24,3 +24,4 @@ patch_pages.py
 
 .DS_Store
 Thumbs.db
+firebase_creds.json
