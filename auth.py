@@ -66,21 +66,52 @@ def require_login() -> str:
     """
     authenticator = _get_authenticator()
 
-    # Only render the login form when not already authenticated in this session
+    # Only render the login/register form when not already authenticated in this session
     if st.session_state.get("authentication_status") is not True:
-        authenticator.login(
-            location="main",
-            key="money_tracker_login",
+        auth_mode = st.radio(
+            "Account Access Mode",
+            ["🔑 Log In", "📝 Sign Up"],
+            horizontal=True,
+            label_visibility="collapsed",
+            key="auth_mode_radio"
         )
 
-        auth_status = st.session_state.get("authentication_status")
+        if auth_mode == "🔑 Log In":
+            authenticator.login(
+                location="main",
+                key="money_tracker_login",
+            )
 
-        if auth_status is False:
-            st.error("❌ Incorrect username or password. Please try again.")
-            st.stop()
+            auth_status = st.session_state.get("authentication_status")
 
-        # auth_status is None (form shown, awaiting input) → stop rendering
-        if auth_status is not True:
+            if auth_status is False:
+                st.error("❌ Incorrect username or password. Please try again.")
+                st.stop()
+
+            # auth_status is None (form shown, awaiting input) → stop rendering
+            if auth_status is not True:
+                st.stop()
+        else:
+            is_secrets_mode = "credentials" in st.secrets and "cookie" in st.secrets
+            if is_secrets_mode:
+                st.warning("⚠️ Sign Up is disabled on this cloud deployment. Please contact the administrator or log in with an existing account.")
+                st.stop()
+
+            try:
+                email, username, name = authenticator.register_user(
+                    location="main",
+                    key="money_tracker_register",
+                    captcha=False,
+                )
+                if username:
+                    with open(_CREDS_FILE, encoding="utf-8") as f:
+                        config = yaml.load(f, Loader=SafeLoader)
+                    config["credentials"] = authenticator.authentication_controller.authentication_model.credentials
+                    with open(_CREDS_FILE, "w", encoding="utf-8") as f:
+                        yaml.dump(config, f)
+                    st.success("🎉 Registration successful! Please select '🔑 Log In' above to access your account.")
+            except Exception as e:
+                st.error(f"❌ Error during registration: {e}")
             st.stop()
 
     # ── Authenticated — add user chip + logout to sidebar top ─────────────────
