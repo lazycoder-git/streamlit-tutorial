@@ -14,6 +14,7 @@ from utils import (
     load_data, save_dataframe, get_symbol,
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS, COLUMNS,
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -26,6 +27,9 @@ st.set_page_config(
 
 
 ALL_CATS = sorted(set(INCOME_CATS + EXPENSE_CATS + ["Transfer"]))
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:

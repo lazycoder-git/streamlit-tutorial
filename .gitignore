@@ -5,7 +5,12 @@ __pycache__/
 
 .streamlit/secrets.toml
 
-# User data (regenerated at runtime, not part of source)
+# Credentials — never commit passwords
+credentials.yaml
+
+# User data (per-user folders, regenerated at runtime)
+data/*/
+# Legacy flat data files (kept for reference)
 data/transactions.csv
 data/budgets.json
 data/recurring.json
@@ -13,6 +18,9 @@ data/goals.json
 data/debts.json
 data/assets.json
 data/backup/
+
+# Temp scripts
+patch_pages.py
 
 .DS_Store
 Thumbs.db

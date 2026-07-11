@@ -12,6 +12,7 @@ from datetime import date, datetime
 from utils import (
     load_goals, save_goals, get_symbol, GOAL_EMOJIS,
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -22,6 +23,9 @@ st.set_page_config(
 )
 
 
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:

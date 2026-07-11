@@ -14,6 +14,7 @@ from utils import (
     load_data, render_currency_selector, MONTHS,
     is_first_run
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -24,6 +25,9 @@ st.set_page_config(
 )
 
 
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:

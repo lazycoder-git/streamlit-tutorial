@@ -13,6 +13,7 @@ from utils import (
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS,
     load_budgets, check_duplicate,
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -23,6 +24,8 @@ st.set_page_config(
 )
 
 
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:

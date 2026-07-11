@@ -13,6 +13,7 @@ from datetime import date, datetime
 from utils import (
     load_debts, save_debts, append_rows, get_symbol,
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -23,6 +24,9 @@ st.set_page_config(
 )
 
 
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:

@@ -6,13 +6,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 import pandas as pd
-import json
 import plotly.graph_objects as go
 from datetime import date, datetime
 
 from utils import (
-    load_data, load_debts, get_symbol, DATA_DIR
+    load_data, load_debts, get_symbol, load_assets, save_assets, get_user_data_dir
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -24,6 +24,9 @@ st.set_page_config(
 
 
 
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
+
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 💰 Money Tracker")
@@ -33,23 +36,6 @@ with st.sidebar:
 st.title("🏦 Net Worth Tracker")
 st.caption("Calculate your total net worth by combining account balances, physical assets, and current liabilities.")
 st.divider()
-
-# File path for manual assets
-ASSETS_FILE = os.path.join(DATA_DIR, "assets.json")
-
-def load_assets() -> dict[str, float]:
-    if not os.path.exists(ASSETS_FILE):
-        return {}
-    try:
-        with open(ASSETS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
-
-def save_assets(assets: dict[str, float]):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(ASSETS_FILE, "w", encoding="utf-8") as f:
-        json.dump(assets, f, indent=2)
 
 manual_assets = load_assets()
 debts = load_debts()

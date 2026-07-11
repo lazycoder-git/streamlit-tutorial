@@ -1,5 +1,5 @@
 """utils.py — Shared constants, data layer, and sidebar helpers for Money Tracker."""
-# v2
+# v3 — per-user data directories
 
 import os
 import json
@@ -54,31 +54,47 @@ COLUMNS = [
     "transfer_to", "amount", "note", "description", "source",
 ]
 
-# ─── File paths ───────────────────────────────────────────────────────────────
+# ─── Root paths ───────────────────────────────────────────────────────────────
 _ROOT          = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR       = os.path.join(_ROOT, "data")
-DATA_FILE      = os.path.join(DATA_DIR, "transactions.csv")
-BACKUP_DIR     = os.path.join(DATA_DIR, "backup")
-BUDGET_FILE    = os.path.join(DATA_DIR, "budgets.json")
-RECURRING_FILE = os.path.join(DATA_DIR, "recurring.json")
-GOALS_FILE     = os.path.join(DATA_DIR, "goals.json")
-DEBTS_FILE     = os.path.join(DATA_DIR, "debts.json")
+_BASE_DATA_DIR = os.path.join(_ROOT, "data")
+
+# DATA_DIR kept for backwards compatibility (imported by 8_Net_Worth.py)
+DATA_DIR = _BASE_DATA_DIR
+
+
+# ─── Per-user data directory ──────────────────────────────────────────────────
+def get_user_data_dir() -> str:
+    """Return and create the data directory for the currently logged-in user."""
+    username = st.session_state.get("username", "default")
+    d = os.path.join(_BASE_DATA_DIR, username)
+    os.makedirs(d, exist_ok=True)
+    os.makedirs(os.path.join(d, "backup"), exist_ok=True)
+    return d
+
+
+# ─── Internal path helpers ────────────────────────────────────────────────────
+def _data_file()      -> str: return os.path.join(get_user_data_dir(), "transactions.csv")
+def _backup_dir()     -> str: return os.path.join(get_user_data_dir(), "backup")
+def _budget_file()    -> str: return os.path.join(get_user_data_dir(), "budgets.json")
+def _recurring_file() -> str: return os.path.join(get_user_data_dir(), "recurring.json")
+def _goals_file()     -> str: return os.path.join(get_user_data_dir(), "goals.json")
+def _debts_file()     -> str: return os.path.join(get_user_data_dir(), "debts.json")
+def _assets_file()    -> str: return os.path.join(get_user_data_dir(), "assets.json")
 
 
 # ─── Data I/O ─────────────────────────────────────────────────────────────────
 def ensure_data_file():
-    """Create data/ dir and an empty CSV with headers if it doesn't exist."""
-    os.makedirs(DATA_DIR, exist_ok=True)
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-    if not os.path.exists(DATA_FILE):
-        pd.DataFrame(columns=COLUMNS).to_csv(DATA_FILE, index=False)
+    """Create the user's data dir and an empty CSV with headers if missing."""
+    data_file = _data_file()
+    if not os.path.exists(data_file):
+        pd.DataFrame(columns=COLUMNS).to_csv(data_file, index=False)
 
 
 def load_data() -> pd.DataFrame:
-    """Load and type-cast the transactions CSV."""
+    """Load and type-cast the transactions CSV for the current user."""
     ensure_data_file()
     try:
-        df = pd.read_csv(DATA_FILE, dtype=str)
+        df = pd.read_csv(_data_file(), dtype=str)
     except Exception:
         return pd.DataFrame(columns=COLUMNS)
     if df.empty:
@@ -91,21 +107,21 @@ def load_data() -> pd.DataFrame:
 
 
 def is_first_run() -> bool:
-    """Return True when the app has no transaction data yet."""
-    if not os.path.exists(DATA_FILE):
+    """Return True when the current user has no transaction data yet."""
+    f = _data_file()
+    if not os.path.exists(f):
         return True
     try:
-        df = pd.read_csv(DATA_FILE, dtype=str)
+        df = pd.read_csv(f, dtype=str)
         return df.empty
     except Exception:
         return True
 
 
 def auto_backup(df: pd.DataFrame):
-    """Copy current data to data/backup/YYYY-MM.csv (monthly snapshot)."""
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    """Copy current data to backup/YYYY-MM.csv (monthly snapshot)."""
     stamp = datetime.now().strftime("%Y-%m")
-    dst   = os.path.join(BACKUP_DIR, f"transactions_{stamp}.csv")
+    dst   = os.path.join(_backup_dir(), f"transactions_{stamp}.csv")
     out   = df.copy()
     if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
         out["date"] = out["date"].dt.strftime("%Y-%m-%d")
@@ -117,7 +133,7 @@ def save_dataframe(df: pd.DataFrame):
     out = df.copy()
     if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
         out["date"] = out["date"].dt.strftime("%Y-%m-%d")
-    out.to_csv(DATA_FILE, index=False)
+    out.to_csv(_data_file(), index=False)
     auto_backup(df)
 
 
@@ -125,7 +141,7 @@ def append_rows(rows: list[dict]):
     """Append one or more row dicts to the CSV."""
     ensure_data_file()
     pd.DataFrame(rows, columns=COLUMNS).to_csv(
-        DATA_FILE, mode="a", header=False, index=False
+        _data_file(), mode="a", header=False, index=False
     )
 
 
@@ -149,74 +165,93 @@ def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
 
 # ─── Budget helpers ───────────────────────────────────────────────────────────
 def load_budgets() -> dict[str, float]:
-    if not os.path.exists(BUDGET_FILE):
+    f = _budget_file()
+    if not os.path.exists(f):
         return {}
     try:
-        with open(BUDGET_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(f, "r", encoding="utf-8") as fp:
+            return json.load(fp)
     except Exception:
         return {}
 
 
 def save_budgets(budgets: dict[str, float]):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(BUDGET_FILE, "w", encoding="utf-8") as f:
-        json.dump(budgets, f, indent=2)
+    with open(_budget_file(), "w", encoding="utf-8") as fp:
+        json.dump(budgets, fp, indent=2)
 
 
 # ─── Recurring transaction helpers ────────────────────────────────────────────
 def load_recurring() -> list[dict]:
-    if not os.path.exists(RECURRING_FILE):
+    f = _recurring_file()
+    if not os.path.exists(f):
         return []
     try:
-        with open(RECURRING_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(f, "r", encoding="utf-8") as fp:
+            return json.load(fp)
     except Exception:
         return []
 
 
 def save_recurring(templates: list[dict]):
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(RECURRING_FILE, "w", encoding="utf-8") as f:
-        json.dump(templates, f, indent=2, default=str)
+    with open(_recurring_file(), "w", encoding="utf-8") as fp:
+        json.dump(templates, fp, indent=2, default=str)
 
 
 # ─── Goals helpers ────────────────────────────────────────────────────────────
 def load_goals() -> list[dict]:
     """Load financial goals from JSON."""
-    if not os.path.exists(GOALS_FILE):
+    f = _goals_file()
+    if not os.path.exists(f):
         return []
     try:
-        with open(GOALS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(f, "r", encoding="utf-8") as fp:
+            return json.load(fp)
     except Exception:
         return []
 
 
 def save_goals(goals: list[dict]):
     """Persist financial goals to JSON."""
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(GOALS_FILE, "w", encoding="utf-8") as f:
-        json.dump(goals, f, indent=2, default=str)
+    with open(_goals_file(), "w", encoding="utf-8") as fp:
+        json.dump(goals, fp, indent=2, default=str)
 
 
 # ─── Debt helpers ─────────────────────────────────────────────────────────────
 def load_debts() -> list[dict]:
     """Load debt records from JSON."""
-    if not os.path.exists(DEBTS_FILE):
+    f = _debts_file()
+    if not os.path.exists(f):
         return []
     try:
-        with open(DEBTS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(f, "r", encoding="utf-8") as fp:
+            return json.load(fp)
     except Exception:
         return []
 
 
 def save_debts(debts: list[dict]):
     """Persist debt records to JSON."""
-    os.makedirs(DATA_DIR, exist_ok=True)
-    with open(DEBTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(debts, f, indent=2, default=str)
+    with open(_debts_file(), "w", encoding="utf-8") as fp:
+        json.dump(debts, fp, indent=2, default=str)
+
+
+# ─── Assets helpers ───────────────────────────────────────────────────────────
+def load_assets() -> dict[str, float]:
+    """Load manual assets (e.g. stocks, gold) from JSON."""
+    f = _assets_file()
+    if not os.path.exists(f):
+        return {}
+    try:
+        with open(f, "r", encoding="utf-8") as fp:
+            return json.load(fp)
+    except Exception:
+        return {}
+
+
+def save_assets(assets: dict[str, float]):
+    """Persist manual assets to JSON."""
+    with open(_assets_file(), "w", encoding="utf-8") as fp:
+        json.dump(assets, fp, indent=2)
 
 
 # ─── Sidebar currency selector ────────────────────────────────────────────────

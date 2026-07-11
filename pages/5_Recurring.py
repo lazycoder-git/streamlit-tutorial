@@ -12,6 +12,7 @@ from utils import (
     load_recurring, save_recurring, append_rows, get_symbol,
     RECURRENCE_OPTS,
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -22,6 +23,9 @@ st.set_page_config(
 )
 
 
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:

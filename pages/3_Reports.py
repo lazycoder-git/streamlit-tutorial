@@ -14,6 +14,7 @@ from datetime import datetime
 from utils import (
     load_data, get_symbol, MONTHS, EXPENSE_CATS,
 )
+from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -24,6 +25,9 @@ st.set_page_config(
 )
 
 
+
+# ── Auth gate ──────────────────────────────────────────────────────────────────
+require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
