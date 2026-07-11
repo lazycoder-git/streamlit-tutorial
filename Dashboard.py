@@ -76,7 +76,6 @@ if is_first_run():
     st.page_link("pages/7_Debts.py", label="Step 4: Keep track of Loans and credit card EMIs", icon="💳")
     st.page_link("pages/8_Net_Worth.py", label="Step 5: Check your consolidated Net Worth", icon="🏦")
     
-    st.info("💡 Pro-Tip: You can change the base currency symbol and toggle Light/Dark mode directly from the sidebar on any page!")
     st.stop()
 
 st.caption(f"Your financial overview for **{sel_month_name} {int(sel_year)}**")
