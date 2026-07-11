@@ -68,17 +68,19 @@ def require_login() -> str:
 
     # Only render the login form when not already authenticated in this session
     if st.session_state.get("authentication_status") is not True:
-        _, auth_status, _ = authenticator.login(
+        authenticator.login(
             location="main",
             key="money_tracker_login",
         )
+
+        auth_status = st.session_state.get("authentication_status")
 
         if auth_status is False:
             st.error("❌ Incorrect username or password. Please try again.")
             st.stop()
 
         # auth_status is None (form shown, awaiting input) → stop rendering
-        if st.session_state.get("authentication_status") is not True:
+        if auth_status is not True:
             st.stop()
 
     # ── Authenticated — add user chip + logout to sidebar top ─────────────────
