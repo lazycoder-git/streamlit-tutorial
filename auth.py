@@ -1,56 +1,57 @@
 """auth.py — Login gate for Money Tracker. Call require_login() on every page."""
 
 import os
-import yaml
-from yaml.loader import SafeLoader
 import streamlit as st
 import streamlit_authenticator as stauth
+from firebase_db import db
 
-_ROOT       = os.path.dirname(os.path.abspath(__file__))
-_CREDS_FILE = os.path.join(_ROOT, "credentials.yaml")
+
+def _load_credentials_from_firebase() -> dict:
+    """Fetch all users from Firestore 'users' collection."""
+    users_ref = db.collection("users")
+    docs = users_ref.stream()
+
+    usernames = {}
+    for doc in docs:
+        data = doc.to_dict()
+        usernames[doc.id] = {
+            "email": data.get("email", ""),
+            "failed_login_attempts": data.get("failed_login_attempts", 0),
+            "logged_in": data.get("logged_in", False),
+            "name": data.get("name", doc.id.capitalize()),
+            "password": data.get("password", "")
+        }
+
+    # If no users exist in Firestore (first run), seed the default user
+    if not usernames:
+        default_user = {
+            "email": "ghost@example.com",
+            "failed_login_attempts": 0,
+            "logged_in": False,
+            "name": "Ghost",
+            "password": "$2b$12$SaWrBuP6.o3MMTvVZ0ZTyeRr2tMNvfoWVL9dc/qsagW34h53REnxy"  # 'money123'
+        }
+        db.collection("users").document("ghost").set(default_user)
+        usernames["ghost"] = default_user
+
+    return {"usernames": usernames}
 
 
 def _get_authenticator() -> stauth.Authenticate:
-    """Load or retrieve cached authenticator from session state."""
+    """Load credentials from Firestore and initialize stauth Authenticate class."""
     if "_mt_authenticator" not in st.session_state:
-        # 1. Try loading from Streamlit secrets first (useful for secure cloud deployment)
-        if "credentials" in st.secrets and "cookie" in st.secrets:
-            config = {
-                "credentials": st.secrets["credentials"],
-                "cookie": st.secrets["cookie"]
-            }
-        else:
-            # 2. Fallback to credentials.yaml, auto-generating it if missing
-            if not os.path.exists(_CREDS_FILE):
-                default_config = {
-                    "credentials": {
-                        "usernames": {
-                            "ghost": {
-                                "email": "ghost@example.com",
-                                "failed_login_attempts": 0,
-                                "logged_in": False,
-                                "name": "Ghost",
-                                "password": "$2b$12$SaWrBuP6.o3MMTvVZ0ZTyeRr2tMNvfoWVL9dc/qsagW34h53REnxy"
-                            }
-                        }
-                    },
-                    "cookie": {
-                        "expiry_days": 30.0,
-                        "key": "money_tracker_secret_key_xk92bv",
-                        "name": "money_tracker_auth"
-                    }
-                }
-                with open(_CREDS_FILE, "w", encoding="utf-8") as f:
-                    yaml.dump(default_config, f)
-
-            with open(_CREDS_FILE, encoding="utf-8") as f:
-                config = yaml.load(f, Loader=SafeLoader)
+        creds = _load_credentials_from_firebase()
+        
+        # Read cookie config from Streamlit secrets, or use defaults
+        cookie_name = st.secrets.get("cookie", {}).get("name", "money_tracker_auth")
+        cookie_key = st.secrets.get("cookie", {}).get("key", "money_tracker_secret_key_xk92bv")
+        cookie_expiry = float(st.secrets.get("cookie", {}).get("expiry_days", 30.0))
 
         st.session_state["_mt_authenticator"] = stauth.Authenticate(
-            config["credentials"],
-            config["cookie"]["name"],
-            config["cookie"]["key"],
-            config["cookie"]["expiry_days"],
+            creds,
+            cookie_name,
+            cookie_key,
+            cookie_expiry,
             auto_hash=False,
         )
     return st.session_state["_mt_authenticator"]
@@ -58,7 +59,7 @@ def _get_authenticator() -> stauth.Authenticate:
 
 def require_login() -> str:
     """
-    Show login form if not authenticated.
+    Show login/register form if not authenticated.
     Adds user info + Logout button at the top of the sidebar.
     Returns the logged-in username as a string.
 
@@ -92,11 +93,6 @@ def require_login() -> str:
             if auth_status is not True:
                 st.stop()
         else:
-            is_secrets_mode = "credentials" in st.secrets and "cookie" in st.secrets
-            if is_secrets_mode:
-                st.warning("⚠️ Sign Up is disabled on this cloud deployment. Please contact the administrator or log in with an existing account.")
-                st.stop()
-
             try:
                 email, username, name = authenticator.register_user(
                     location="main",
@@ -104,11 +100,17 @@ def require_login() -> str:
                     captcha=False,
                 )
                 if username:
-                    with open(_CREDS_FILE, encoding="utf-8") as f:
-                        config = yaml.load(f, Loader=SafeLoader)
-                    config["credentials"] = authenticator.authentication_controller.authentication_model.credentials
-                    with open(_CREDS_FILE, "w", encoding="utf-8") as f:
-                        yaml.dump(config, f)
+                    # Retrieve the registered user info from authenticator credentials
+                    user_data = authenticator.authentication_controller.authentication_model.credentials["usernames"][username]
+                    
+                    db_user = {
+                        "email": user_data.get("email", ""),
+                        "failed_login_attempts": user_data.get("failed_login_attempts", 0),
+                        "logged_in": user_data.get("logged_in", False),
+                        "name": f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip() or username.capitalize(),
+                        "password": user_data.get("password", "")
+                    }
+                    db.collection("users").document(username).set(db_user)
                     st.success("🎉 Registration successful! Please select '🔑 Log In' above to access your account.")
             except Exception as e:
                 st.error(f"❌ Error during registration: {e}")

@@ -10,6 +10,7 @@ credentials.yaml
 
 # User data (per-user folders, regenerated at runtime)
 data/*/
+
 # Legacy flat data files (kept for reference)
 data/transactions.csv
 data/budgets.json
@@ -19,7 +20,6 @@ data/debts.json
 data/assets.json
 data/backup/
 
-# Temp scripts
 patch_pages.py
 
 .DS_Store

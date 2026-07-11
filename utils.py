@@ -1,12 +1,10 @@
-"""utils.py — Shared constants, data layer, and sidebar helpers for Money Tracker."""
-# v3 — per-user data directories
+"""utils.py — Shared constants, Firestore data layer, and sidebar helpers for Money Tracker."""
+# v4 — Firebase Firestore Integration
 
 import os
-import json
-from datetime import datetime, timedelta
-
 import pandas as pd
 import streamlit as st
+from firebase_db import db
 
 # ─── Currency map ─────────────────────────────────────────────────────────────
 CURRENCIES: dict[str, str] = {
@@ -47,90 +45,106 @@ RECURRENCE_OPTS = ["Daily", "Weekly", "Monthly"]
 GOAL_EMOJIS = ["🏠", "✈️", "🚗", "💻", "📱", "🎓", "💍", "🏖️", "🏋️", "🎯",
                "💰", "🛍️", "🎸", "📷", "⌚", "🌍", "🏥", "🎉", "🐾", "🌱"]
 
-# ─── CSV columns ──────────────────────────────────────────────────────────────
+# ─── Firestore columns ────────────────────────────────────────────────────────
 COLUMNS = [
     "id", "date", "type", "category", "account",
     "transfer_to", "amount", "note", "description", "source",
 ]
 
-# ─── Root paths ───────────────────────────────────────────────────────────────
-_ROOT          = os.path.dirname(os.path.abspath(__file__))
-_BASE_DATA_DIR = os.path.join(_ROOT, "data")
-
-# ─── Per-user data directory ──────────────────────────────────────────────────
-def get_user_data_dir() -> str:
-    """Return and create the data directory for the currently logged-in user."""
-    username = st.session_state.get("username", "default")
-    d = os.path.join(_BASE_DATA_DIR, username)
-    os.makedirs(d, exist_ok=True)
-    os.makedirs(os.path.join(d, "backup"), exist_ok=True)
-    return d
-
-# ─── Internal path helpers ────────────────────────────────────────────────────
-def _data_file()      -> str: return os.path.join(get_user_data_dir(), "transactions.csv")
-def _backup_dir()     -> str: return os.path.join(get_user_data_dir(), "backup")
-def _budget_file()    -> str: return os.path.join(get_user_data_dir(), "budgets.json")
-def _recurring_file() -> str: return os.path.join(get_user_data_dir(), "recurring.json")
-def _goals_file()     -> str: return os.path.join(get_user_data_dir(), "goals.json")
-def _debts_file()     -> str: return os.path.join(get_user_data_dir(), "debts.json")
-def _assets_file()    -> str: return os.path.join(get_user_data_dir(), "assets.json")
 
 # ─── Data I/O ─────────────────────────────────────────────────────────────────
 def ensure_data_file():
-    """Create the user's data dir and an empty CSV with headers if missing."""
-    data_file = _data_file()
-    if not os.path.exists(data_file):
-        pd.DataFrame(columns=COLUMNS).to_csv(data_file, index=False)
+    """No-op for backward compatibility (formerly created local files)."""
+    pass
+
 
 def load_data() -> pd.DataFrame:
-    """Load and type-cast the transactions CSV for the current user."""
-    ensure_data_file()
-    try:
-        df = pd.read_csv(_data_file(), dtype=str)
-    except Exception:
+    """Load and type-cast the transactions from Firestore for the current user."""
+    username = st.session_state.get("username", "default")
+    tx_ref = db.collection("users").document(username).collection("transactions")
+    docs = tx_ref.stream()
+
+    rows = []
+    for doc in docs:
+        rows.append(doc.to_dict())
+
+    if not rows:
         return pd.DataFrame(columns=COLUMNS)
-    if df.empty:
-        return pd.DataFrame(columns=COLUMNS)
+
+    df = pd.DataFrame(rows, columns=COLUMNS)
     df["date"]   = pd.to_datetime(df["date"], errors="coerce")
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0.0)
     for col in ("transfer_to", "note", "description", "source", "category", "account"):
         df[col] = df.get(col, pd.Series(dtype=str)).fillna("")
     return df
 
+
 def is_first_run() -> bool:
-    """Return True when the current user has no transaction data yet."""
-    f = _data_file()
-    if not os.path.exists(f):
-        return True
-    try:
-        df = pd.read_csv(f, dtype=str)
-        return df.empty
-    except Exception:
-        return True
+    """Return True when the current user has no transaction data in Firestore yet."""
+    username = st.session_state.get("username", "default")
+    tx_ref = db.collection("users").document(username).collection("transactions")
+    docs = tx_ref.limit(1).get()
+    return len(docs) == 0
+
 
 def auto_backup(df: pd.DataFrame):
-    """Copy current data to backup/YYYY-MM.csv (monthly snapshot)."""
-    stamp = datetime.now().strftime("%Y-%m")
-    dst   = os.path.join(_backup_dir(), f"transactions_{stamp}.csv")
-    out   = df.copy()
-    if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
-        out["date"] = out["date"].dt.strftime("%Y-%m-%d")
-    out.to_csv(dst, index=False)
+    """No-op for backward compatibility (Firestore handles cloud durability)."""
+    pass
+
 
 def save_dataframe(df: pd.DataFrame):
-    """Overwrite the CSV with the given DataFrame and create a monthly backup."""
-    out = df.copy()
-    if "date" in out.columns and pd.api.types.is_datetime64_any_dtype(out["date"]):
-        out["date"] = out["date"].dt.strftime("%Y-%m-%d")
-    out.to_csv(_data_file(), index=False)
-    auto_backup(df)
+    """Overwrite the Firestore transactions collection with the given DataFrame."""
+    username = st.session_state.get("username", "default")
+    tx_ref = db.collection("users").document(username).collection("transactions")
+
+    # 1. Delete all existing transaction documents
+    existing_docs = tx_ref.stream()
+    for doc in existing_docs:
+        doc.reference.delete()
+
+    # 2. Write new rows
+    for _, row in df.iterrows():
+        row_dict = row.to_dict()
+        
+        # Format date correctly
+        if "date" in row_dict and pd.notnull(row_dict["date"]):
+            if isinstance(row_dict["date"], pd.Timestamp):
+                row_dict["date"] = row_dict["date"].strftime("%Y-%m-%d")
+            else:
+                row_dict["date"] = str(row_dict["date"])[:10]
+        else:
+            row_dict["date"] = ""
+
+        row_dict["amount"] = float(row_dict.get("amount", 0.0))
+        
+        # Ensure we have a valid document ID
+        doc_id = str(row_dict.get("id"))
+        if not doc_id or doc_id == "nan" or doc_id == "None":
+            import uuid
+            doc_id = str(uuid.uuid4())[:8]
+            row_dict["id"] = doc_id
+            
+        tx_ref.document(doc_id).set(row_dict)
+
 
 def append_rows(rows: list[dict]):
-    """Append one or more row dicts to the CSV."""
-    ensure_data_file()
-    pd.DataFrame(rows, columns=COLUMNS).to_csv(
-        _data_file(), mode="a", header=False, index=False
-    )
+    """Append one or more row dicts as documents in Firestore."""
+    username = st.session_state.get("username", "default")
+    tx_ref = db.collection("users").document(username).collection("transactions")
+    
+    for row in rows:
+        row_dict = dict(row)
+        row_dict["amount"] = float(row_dict.get("amount", 0.0))
+        
+        # Ensure we have a valid document ID
+        doc_id = str(row_dict.get("id"))
+        if not doc_id or doc_id == "nan" or doc_id == "None":
+            import uuid
+            doc_id = str(uuid.uuid4())[:8]
+            row_dict["id"] = doc_id
+            
+        tx_ref.document(doc_id).set(row_dict)
+
 
 # ─── Duplicate detection ──────────────────────────────────────────────────────
 def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
@@ -138,6 +152,7 @@ def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
     """Return True if a very similar transaction exists within window_days."""
     if df.empty:
         return False
+    from datetime import timedelta
     cutoff = pd.Timestamp(tx_date) - timedelta(days=window_days)
     recent = df[df["date"] >= cutoff]
     if recent.empty:
@@ -149,86 +164,88 @@ def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
     ]
     return len(matches) > 0
 
+
 # ─── Budget helpers ───────────────────────────────────────────────────────────
 def load_budgets() -> dict[str, float]:
-    f = _budget_file()
-    if not os.path.exists(f):
-        return {}
-    try:
-        with open(f, "r", encoding="utf-8") as fp:
-            return json.load(fp)
-    except Exception:
-        return {}
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("budgets")
+    doc = doc_ref.get()
+    if doc.exists:
+        return {k: float(v) for k, v in doc.to_dict().items()}
+    return {}
+
 
 def save_budgets(budgets: dict[str, float]):
-    with open(_budget_file(), "w", encoding="utf-8") as fp:
-        json.dump(budgets, fp, indent=2)
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("budgets")
+    data = {k: float(v) for k, v in budgets.items()}
+    doc_ref.set(data)
+
 
 # ─── Recurring transaction helpers ────────────────────────────────────────────
 def load_recurring() -> list[dict]:
-    f = _recurring_file()
-    if not os.path.exists(f):
-        return []
-    try:
-        with open(f, "r", encoding="utf-8") as fp:
-            return json.load(fp)
-    except Exception:
-        return []
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("recurring")
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict().get("list", [])
+    return []
+
 
 def save_recurring(templates: list[dict]):
-    with open(_recurring_file(), "w", encoding="utf-8") as fp:
-        json.dump(templates, fp, indent=2, default=str)
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("recurring")
+    doc_ref.set({"list": templates})
+
 
 # ─── Goals helpers ────────────────────────────────────────────────────────────
 def load_goals() -> list[dict]:
-    """Load financial goals from JSON."""
-    f = _goals_file()
-    if not os.path.exists(f):
-        return []
-    try:
-        with open(f, "r", encoding="utf-8") as fp:
-            return json.load(fp)
-    except Exception:
-        return []
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("goals")
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict().get("list", [])
+    return []
+
 
 def save_goals(goals: list[dict]):
-    """Persist financial goals to JSON."""
-    with open(_goals_file(), "w", encoding="utf-8") as fp:
-        json.dump(goals, fp, indent=2, default=str)
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("goals")
+    doc_ref.set({"list": goals})
+
 
 # ─── Debt helpers ─────────────────────────────────────────────────────────────
 def load_debts() -> list[dict]:
-    """Load debt records from JSON."""
-    f = _debts_file()
-    if not os.path.exists(f):
-        return []
-    try:
-        with open(f, "r", encoding="utf-8") as fp:
-            return json.load(fp)
-    except Exception:
-        return []
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("debts")
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict().get("list", [])
+    return []
+
 
 def save_debts(debts: list[dict]):
-    """Persist debt records to JSON."""
-    with open(_debts_file(), "w", encoding="utf-8") as fp:
-        json.dump(debts, fp, indent=2, default=str)
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("debts")
+    doc_ref.set({"list": debts})
+
 
 # ─── Assets helpers ───────────────────────────────────────────────────────────
 def load_assets() -> dict[str, float]:
-    """Load manual assets (e.g. stocks, gold) from JSON."""
-    f = _assets_file()
-    if not os.path.exists(f):
-        return {}
-    try:
-        with open(f, "r", encoding="utf-8") as fp:
-            return json.load(fp)
-    except Exception:
-        return {}
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("assets")
+    doc = doc_ref.get()
+    if doc.exists:
+        return {k: float(v) for k, v in doc.to_dict().items()}
+    return {}
+
 
 def save_assets(assets: dict[str, float]):
-    """Persist manual assets to JSON."""
-    with open(_assets_file(), "w", encoding="utf-8") as fp:
-        json.dump(assets, fp, indent=2)
+    username = st.session_state.get("username", "default")
+    doc_ref = db.collection("users").document(username).collection("data").document("assets")
+    data = {k: float(v) for k, v in assets.items()}
+    doc_ref.set(data)
+
 
 # ─── Sidebar currency selector ────────────────────────────────────────────────
 def render_currency_selector() -> str:
@@ -243,6 +260,7 @@ def render_currency_selector() -> str:
     sym = CURRENCIES[chosen]
     st.session_state["currency_symbol"] = sym
     return sym
+
 
 def get_symbol() -> str:
     return st.session_state.get("currency_symbol", "₹")

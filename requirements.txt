@@ -4,3 +4,4 @@ plotly
 fpdf2
 streamlit-authenticator
 PyYAML
+firebase-admin
