@@ -60,7 +60,7 @@ st.markdown(f"""
     </span>
     <p style="margin: 4px 0 0 0; color: #E2E8F0; font-size: 0.92rem; line-height: 1.5;">
         This application analyzes audited cash flow dynamics, 50/30/20 compliance, emergency cash burn runway,
-        and net worth formation for <b>Alex Morgan (Tech Consultant)</b>. Explore <b>📖 Case Study Analysis</b> in the sidebar for complete hypotheses, empirical evidence, and dynamic shock simulations.
+        and net worth formation for <b>Rahul Sharma (Senior Tech Consultant)</b>. Explore <b>📖 Case Study Analysis</b> in the sidebar for complete hypotheses, empirical evidence, and methodology.
     </p>
 </div>
 """, unsafe_allow_html=True)

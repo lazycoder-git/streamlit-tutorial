@@ -55,10 +55,9 @@ goals = load_goals()
 assets = load_assets()
 
 # ── Navigation Tabs ────────────────────────────────────────────────────────────
-tab_overview, tab_hypotheses, tab_stresstest, tab_methodology = st.tabs([
+tab_overview, tab_hypotheses, tab_methodology = st.tabs([
     "🎯 Case Study Profile & Context",
     "🔬 Empirical Hypotheses & Findings",
-    "⚡ Dynamic Shock Stress-Testing",
     "📐 Methodology & Analytical Pipeline"
 ])
 
@@ -67,27 +66,67 @@ with tab_overview:
     c1, c2 = st.columns([1.6, 1], gap="large")
 
     with c1:
-        st.subheader("👤 Persona Profile: Alex Morgan (Tech Consultant)")
-        st.markdown("""
-        To avoid the generic, synthetic appearance of random numbers, this project models an audited
-        **12-month longitudinal financial case study** for **Alex Morgan**, a 28-year-old senior software consultant
-        and freelance UI engineer residing in an urban metro area.
+        st.markdown(f"""
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h3 style="margin: 0; color: #FFFFFF; font-size: 1.25rem;">👤 Persona: Rahul Sharma</h3>
+                <span style="background: rgba(124,58,237,0.25); color: #C4B5FD; border: 1px solid rgba(124,58,237,0.4); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600;">
+                    Indian Tech Consultant · Bengaluru
+                </span>
+            </div>
+            <p style="margin: 0; color: #CBD5E1; font-size: 0.94rem; line-height: 1.6;">
+                To avoid the generic, synthetic appearance of random numbers, this project models an audited
+                <b>12-month longitudinal financial case study</b> for <b>Rahul Sharma</b>, a 28-year-old senior software consultant
+                and freelance architect residing in Bengaluru. The data captures authentic cash flow dynamics, seasonal variation,
+                and real-world financial milestones.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
-        ##### 💼 Income Architecture
-        - **Primary Tech Salary**: $4,200.00 / month ($50,400 annualized net base salary, deposited on the 1st).
-        - **Variable Freelance Milestones**: $950 to $1,400 periodic consulting bonuses (March, July, October sprints).
-        - **Passive Capital Inflow**: Quarterly dividend distributions from index mutual funds ($150–$230 in Mar, Jun, Sep, Dec).
+        col_p1, col_p2 = st.columns(2)
 
-        ##### 🏡 Outflow & Obligation Structure
-        - **Committed Living Obligations (Needs)**: $1,400 monthly apartment lease, $250 utilities (electricity, water, fiber broadband), and $120 comprehensive health/dental premium.
-        - **Debt Amortization**: Fixed education student loan EMI ($380/mo) and active credit card payoff.
-        - **Discretionary Lifestyle (Wants)**: Supermarket groceries, weekend cafe dining, fitness club ($45/mo), digital subscriptions ($34/mo).
-        - **Real-World Empirical Shocks**:
-          - *April Emergency*: Dental root canal copay ($850).
-          - *July Seasonal Spike*: Summer holiday travel ($1,250).
-          - *September Skill Investment*: Cloud Solutions Architect certification and prep voucher ($320).
-          - *December Holiday Surge*: Year-end gifting and festive dining ($820).
-        """)
+        with col_p1:
+            st.markdown(f"""
+            <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                <h5 style="margin: 0 0 8px 0; color: #34D399; font-size: 0.92rem; font-weight: 700;">💼 Income Architecture</h5>
+                <ul style="margin: 0; padding-left: 18px; color: #E2E8F0; font-size: 0.86rem; line-height: 1.6;">
+                    <li><b>Primary Tech Salary</b>: {sym}4,200.00 / month ({sym}50,400 net base annualized, credited on 1st).</li>
+                    <li><b>Freelance Milestones</b>: {sym}950 to {sym}1,400 periodic consulting bonuses (Mar, Jul, Oct sprints).</li>
+                    <li><b>Passive Dividends</b>: {sym}150 to {sym}230 quarterly payouts from index mutual funds.</li>
+                </ul>
+            </div>
+
+            <div style="background: rgba(59, 130, 246, 0.06); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                <h5 style="margin: 0 0 8px 0; color: #60A5FA; font-size: 0.92rem; font-weight: 700;">🏠 Committed Obligations (Needs)</h5>
+                <ul style="margin: 0; padding-left: 18px; color: #E2E8F0; font-size: 0.86rem; line-height: 1.6;">
+                    <li><b>Apartment Lease</b>: {sym}1,400.00 monthly rent in tech corridor.</li>
+                    <li><b>Utilities & Fiber</b>: {sym}250.00 / month (power, water, gigabit internet).</li>
+                    <li><b>Health & Dental Insurance</b>: {sym}120.00 / month comprehensive coverage.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_p2:
+            st.markdown(f"""
+            <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                <h5 style="margin: 0 0 8px 0; color: #FBBF24; font-size: 0.92rem; font-weight: 700;">💳 Debt & Lifestyle (Wants)</h5>
+                <ul style="margin: 0; padding-left: 18px; color: #E2E8F0; font-size: 0.86rem; line-height: 1.6;">
+                    <li><b>Education Loan EMI</b>: {sym}380.00 / month amortizing student loan.</li>
+                    <li><b>Credit Card Payoff</b>: Systematic payments targeting high-rate balance.</li>
+                    <li><b>Lifestyle & Fitness</b>: Weekend cafe dining, gym ({sym}45/mo), digital subs ({sym}34/mo).</li>
+                </ul>
+            </div>
+
+            <div style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                <h5 style="margin: 0 0 8px 0; color: #F87171; font-size: 0.92rem; font-weight: 700;">⚡ Real-World Shocks & Events</h5>
+                <ul style="margin: 0; padding-left: 18px; color: #E2E8F0; font-size: 0.86rem; line-height: 1.6;">
+                    <li><b>April Emergency</b>: Dental root canal copay ({sym}850).</li>
+                    <li><b>July Travel Spike</b>: Monsoon holiday retreat ({sym}1,250).</li>
+                    <li><b>September Upskilling</b>: Cloud Architect certification ({sym}320).</li>
+                    <li><b>December Festive Surge</b>: Year-end gifting & celebrations ({sym}820).</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
 
     with c2:
         st.subheader("📊 12-Month Dataset Summary")
@@ -115,28 +154,28 @@ with tab_hypotheses:
         {
             "Hypothesis": "H1: 50/30/20 Budget Compliance",
             "Inquiry": "Does variable consulting income and seasonal inflation cause essential living needs to breach the 50% safety threshold?",
-            "Evidence": "Needs averaged 44.8% of income across the 12 months (peaking at 49.2% during winter heating spikes in January). Wants averaged 26.4%, and Savings averaged 28.8%.",
+            "Evidence": f"Needs averaged 44.8% of income across the 12 months (peaking at 49.2% during winter heating spikes in January). Wants averaged 26.4%, and Savings averaged 28.8%.",
             "Conclusion": "✅ VALIDATED: The budget maintains strict compliance with the 50/30/20 framework, ensuring adequate margin for wealth compounding.",
             "Color": "#10B981"
         },
         {
             "Hypothesis": "H2: Emergency Liquidity Cushion",
             "Inquiry": "Can liquid cash reserves maintain at least 6 months of living expenses during episodic medical and vacation shocks?",
-            "Evidence": "Liquid cash balances hovered between 4.8 months and 7.2 months of burn rate. Following the April dental emergency copay ($850), runway dipped to 5.1 months before recovering in June.",
+            "Evidence": f"Liquid cash balances hovered between 4.8 months and 7.2 months of burn rate. Following the April dental emergency copay ({sym}850), runway dipped to 5.1 months before recovering in June.",
             "Conclusion": "✅ VALIDATED: The emergency cushion prevented debt dependency during unexpected medical crises, exceeding the 3-month survival minimum.",
             "Color": "#10B981"
         },
         {
             "Hypothesis": "H3: Behavioral Weekend Surge",
             "Inquiry": "Does discretionary leisure spending disproportionately cluster on weekends vs. weekdays?",
-            "Evidence": "Heatmap analysis reveals that 68.4% of total dining, takeout, and shopping outflow occurred on Friday through Sunday, averaging $145/weekend vs $32/weekday.",
-            "Conclusion": "💡 ACTIONABLE TAKEAWAY: Implementing a targeted $80 weekend dining cap represents the highest-leverage lever to free up an additional $260/month in net savings.",
+            "Evidence": f"Heatmap analysis reveals that 68.4% of total dining, takeout, and shopping outflow occurred on Friday through Sunday, averaging {sym}145/weekend vs {sym}32/weekday.",
+            "Conclusion": f"💡 ACTIONABLE TAKEAWAY: Implementing a targeted {sym}80 weekend dining cap represents the highest-leverage lever to free up an additional {sym}260/month in net savings.",
             "Color": "#3B82F6"
         },
         {
             "Hypothesis": "H4: Debt Amortization Efficiency",
             "Inquiry": "Does the mathematically optimal Avalanche strategy yield measurable interest savings compared to the psychological Snowball strategy?",
-            "Evidence": "Targeting the 14.5% APR credit card balance before the 6.2% student loan saves $482.50 in cumulative interest and accelerates debt-free achievement by 3.5 months.",
+            "Evidence": f"Targeting the 14.5% APR credit card balance before the 6.2% student loan saves {sym}482.50 in cumulative interest and accelerates debt-free achievement by 3.5 months.",
             "Conclusion": "🎯 STRATEGIC CONCLUSION: The Avalanche method is recommended for this analytical profile, maximizing capital retention for retirement index funds.",
             "Color": "#8B5CF6"
         }
@@ -152,61 +191,7 @@ with tab_hypotheses:
         </div>
         """, unsafe_allow_html=True)
 
-# ─── TAB 3: Dynamic Stress-Testing ─────────────────────────────────────────────
-with tab_stresstest:
-    st.subheader("⚡ Macroeconomic & Personal Shock Stress-Testing")
-    st.caption("Interact with macroeconomic shock parameters to simulate resilience under adverse cash flow scenarios.")
-
-    col_sim_controls, col_sim_results = st.columns([1, 1.4], gap="large")
-
-    with col_sim_controls:
-        st.markdown("##### 🎛️ Simulation Parameters")
-        inc_shock_pct = st.slider("📉 Income Reduction Shock (% loss of consulting/contract)", 0, 50, 15, step=5)
-        expense_inflation_pct = st.slider("📈 Cost-of-Living Inflation Shock (% increase in rent & utilities)", 0, 40, 10, step=5)
-        one_time_shock = st.number_input(f"🚨 One-Time Unplanned Emergency Copay ({sym})", min_value=0.0, value=1500.0, step=250.0)
-
-    with col_sim_results:
-        # Base 12-month monthly average
-        if not df.empty:
-            m_inc = float(df[df["type"] == "Income"].groupby(df["date"].dt.to_period("M"))["amount"].sum().mean())
-            m_exp = float(df[df["type"] == "Expense"].groupby(df["date"].dt.to_period("M"))["amount"].sum().mean())
-        else:
-            m_inc, m_exp = 4800.0, 3100.0
-
-        # Liquid cash
-        account_balances = {}
-        for _, row in df.iterrows():
-            acc = row["account"]
-            amt = float(row["amount"])
-            if row["type"] == "Income":
-                account_balances[acc] = account_balances.get(acc, 0.0) + amt
-            elif row["type"] == "Expense":
-                account_balances[acc] = account_balances.get(acc, 0.0) - amt
-        liquid_cash = sum(v for v in account_balances.values() if v > 0)
-
-        # Simulated values
-        sim_inc = m_inc * (1 - inc_shock_pct / 100.0)
-        sim_exp = m_exp * (1 + expense_inflation_pct / 100.0)
-        sim_monthly_surplus = sim_inc - sim_exp
-        sim_liquid_cash = max(0.0, liquid_cash - one_time_shock)
-        sim_runway = (sim_liquid_cash / sim_exp) if sim_exp > 0 else 0.0
-
-        st.markdown("##### 📊 Stress-Tested Solvency Diagnostic")
-        res1, res2, res3 = st.columns(3)
-        res1.metric("Simulated Monthly Income", f"{sym}{sim_inc:,.0f}", delta=f"-{inc_shock_pct}% shock")
-        res2.metric("Simulated Monthly Outflow", f"{sym}{sim_exp:,.0f}", delta=f"+{expense_inflation_pct}% inflation", delta_color="inverse")
-        res3.metric("Simulated Net Cash Flow", f"{sym}{sim_monthly_surplus:,.0f}/mo", delta="Surplus" if sim_monthly_surplus >= 0 else "Deficit", delta_color="normal" if sim_monthly_surplus >= 0 else "inverse")
-
-        st.metric("⏳ Stressed Emergency Cash Runway", f"{sim_runway:.1f} Months", delta="Safe (≥6 Mo)" if sim_runway >= 6 else ("Marginal (3-6 Mo)" if sim_runway >= 3 else "High Risk (<3 Mo)"))
-
-        if sim_runway >= 6.0:
-            st.success("🛡️ **Conclusion**: The subject demonstrates **robust financial resilience**. Even under a concurrent 15% income drop and 10% inflation spike with a $1,500 emergency copay, the liquid reserve remains above the 6-month safety benchmark.")
-        elif sim_runway >= 3.0:
-            st.warning("⚠️ **Conclusion**: The subject enters **moderate liquidity stress**. Discretionary lifestyle expenditures (dining, entertainment, subscriptions) would need to be trimmed by $300/mo to restore long-term equilibrium.")
-        else:
-            st.error("🚨 **Conclusion**: The subject faces **severe cash flow deficit**. Liquid capital would be depleted in under 3 months without immediate emergency intervention or credit restructuring.")
-
-# ─── TAB 4: Methodology ────────────────────────────────────────────────────────
+# ─── TAB 3: Methodology ────────────────────────────────────────────────────────
 with tab_methodology:
     st.subheader("📐 Computational Methodology & Python Data Pipeline")
     st.markdown("""
