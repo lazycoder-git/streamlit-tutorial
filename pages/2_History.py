@@ -9,6 +9,8 @@ from datetime import date, datetime, timedelta
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 from utils import (
     load_data, save_dataframe, get_symbol, render_demo_reset_sidebar,
