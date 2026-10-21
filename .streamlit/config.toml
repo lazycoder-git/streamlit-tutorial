@@ -7,3 +7,12 @@ font               = "sans serif"
 
 [server]
 headless = true
+fastReruns = true
+enableStaticServing = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"
+showErrorDetails = false

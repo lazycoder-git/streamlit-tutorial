@@ -91,16 +91,17 @@ avg_burn = float(monthly_burns.mean()) if not monthly_burns.empty else expenses
 
 # Account liquid balance
 account_balances = {}
-for _, row in df.iterrows():
-    acc = row["account"]
-    amt = float(row["amount"])
-    if row["type"] == "Income":
+for row in df.itertuples(index=False):
+    acc = getattr(row, "account", "")
+    amt = float(getattr(row, "amount", 0.0))
+    t_type = getattr(row, "type", "")
+    if t_type == "Income":
         account_balances[acc] = account_balances.get(acc, 0.0) + amt
-    elif row["type"] == "Expense":
+    elif t_type == "Expense":
         account_balances[acc] = account_balances.get(acc, 0.0) - amt
-    elif row["type"] == "Transfer":
+    elif t_type == "Transfer":
         account_balances[acc] = account_balances.get(acc, 0.0) - amt
-        dest = row.get("transfer_to", "")
+        dest = getattr(row, "transfer_to", "")
         if dest:
             account_balances[dest] = account_balances.get(dest, 0.0) + amt
 

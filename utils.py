@@ -57,8 +57,14 @@ COLUMNS = [
 ]
 
 
+_DATA_INITIALIZED = False
+
 def ensure_data_files():
     """Ensure data files exist and are populated with rich demo data if empty."""
+    global _DATA_INITIALIZED
+    if _DATA_INITIALIZED:
+        return
+
     tx_file = os.path.join(_DATA_DIR, "transactions.csv")
     bud_file = os.path.join(_DATA_DIR, "budgets.json")
     debt_file = os.path.join(_DATA_DIR, "debts.json")
@@ -74,15 +80,13 @@ def ensure_data_files():
 
     if needs_seed:
         seed_local_data_files()
+    _DATA_INITIALIZED = True
 
 
-# ─── Data I/O ─────────────────────────────────────────────────────────────────
-def load_data() -> pd.DataFrame:
-    """
-    Load and type-cast transactions from Firestore or local data files.
-    Guarantees non-empty data by falling back to the 12-month case study dataset.
-    """
-    username = st.session_state.get("username", "ghost")
+# ─── Data I/O with Caching ────────────────────────────────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
+def _load_data_cached(username: str) -> pd.DataFrame:
+    """Internal cached loader for transactions to prevent disk/network stalls on reruns."""
     rows = []
 
     # 1. Attempt load from Firestore if available
@@ -117,6 +121,15 @@ def load_data() -> pd.DataFrame:
     return df
 
 
+def load_data() -> pd.DataFrame:
+    """
+    Public data accessor. Returns a clean copy of the cached DataFrame so
+    callers cannot inadvertently mutate the shared memory cache.
+    """
+    username = st.session_state.get("username", "ghost")
+    return _load_data_cached(username).copy()
+
+
 def is_first_run() -> bool:
     """Return True only if there is genuinely zero transaction data in both cloud and local."""
     df = load_data()
@@ -135,6 +148,9 @@ def auto_backup(df: pd.DataFrame):
 
 def save_dataframe(df: pd.DataFrame):
     """Save DataFrame locally and synchronize with Firestore if available."""
+    # Invalidate cache so subsequent reads see the latest data immediately
+    st.cache_data.clear()
+
     # 1. Save locally
     tx_file = os.path.join(_DATA_DIR, "transactions.csv")
     df.to_csv(tx_file, index=False)
@@ -198,6 +214,7 @@ def check_duplicate(df: pd.DataFrame, tx_type: str, category: str,
 
 
 # ─── Budget helpers ───────────────────────────────────────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
 def load_budgets() -> dict[str, float]:
     ensure_data_files()
     fpath = os.path.join(_DATA_DIR, "budgets.json")
@@ -211,12 +228,14 @@ def load_budgets() -> dict[str, float]:
 
 
 def save_budgets(budgets: dict[str, float]):
+    st.cache_data.clear()
     fpath = os.path.join(_DATA_DIR, "budgets.json")
     with open(fpath, "w", encoding="utf-8") as f:
         json.dump(budgets, f, indent=2)
 
 
 # ─── Recurring transaction helpers ────────────────────────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
 def load_recurring() -> list[dict]:
     ensure_data_files()
     fpath = os.path.join(_DATA_DIR, "recurring.json")
@@ -230,12 +249,14 @@ def load_recurring() -> list[dict]:
 
 
 def save_recurring(templates: list[dict]):
+    st.cache_data.clear()
     fpath = os.path.join(_DATA_DIR, "recurring.json")
     with open(fpath, "w", encoding="utf-8") as f:
         json.dump(templates, f, indent=2)
 
 
 # ─── Goals helpers ────────────────────────────────────────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
 def load_goals() -> list[dict]:
     ensure_data_files()
     fpath = os.path.join(_DATA_DIR, "goals.json")
@@ -249,12 +270,14 @@ def load_goals() -> list[dict]:
 
 
 def save_goals(goals: list[dict]):
+    st.cache_data.clear()
     fpath = os.path.join(_DATA_DIR, "goals.json")
     with open(fpath, "w", encoding="utf-8") as f:
         json.dump(goals, f, indent=2)
 
 
 # ─── Debt helpers ─────────────────────────────────────────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
 def load_debts() -> list[dict]:
     ensure_data_files()
     fpath = os.path.join(_DATA_DIR, "debts.json")
@@ -268,12 +291,14 @@ def load_debts() -> list[dict]:
 
 
 def save_debts(debts: list[dict]):
+    st.cache_data.clear()
     fpath = os.path.join(_DATA_DIR, "debts.json")
     with open(fpath, "w", encoding="utf-8") as f:
         json.dump(debts, f, indent=2)
 
 
 # ─── Assets helpers ───────────────────────────────────────────────────────────
+@st.cache_data(ttl=300, show_spinner=False)
 def load_assets() -> dict[str, float]:
     ensure_data_files()
     fpath = os.path.join(_DATA_DIR, "assets.json")
@@ -287,6 +312,7 @@ def load_assets() -> dict[str, float]:
 
 
 def save_assets(assets: dict[str, float]):
+    st.cache_data.clear()
     fpath = os.path.join(_DATA_DIR, "assets.json")
     with open(fpath, "w", encoding="utf-8") as f:
         json.dump(assets, f, indent=2)
@@ -295,6 +321,7 @@ def save_assets(assets: dict[str, float]):
 # ─── Reset Demo Dataset Helper ────────────────────────────────────────────────
 def reset_demo_data():
     """Regenerates the complete 12-month case study dataset across all collections."""
+    st.cache_data.clear()
     seed_local_data_files()
     if FIREBASE_AVAILABLE and db is not None:
         try:

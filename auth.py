@@ -16,6 +16,7 @@ _DEFAULT_USERS = {
 }
 
 
+@st.cache_data(ttl=600, show_spinner=False)
 def _load_credentials() -> dict:
     """Fetch users from Firestore if available, otherwise return local default user."""
     if FIREBASE_AVAILABLE and db is not None:
