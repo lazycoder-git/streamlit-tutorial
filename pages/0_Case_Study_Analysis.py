@@ -105,37 +105,6 @@ with tab_overview:
         else:
             st.info("Loading dataset records...")
 
-    st.divider()
-
-    st.subheader("🧭 Core Analytical Purpose & Business Impact")
-    col_p1, col_p2, col_p3 = st.columns(3)
-    with col_p1:
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
-            <h5 style="color: #60A5FA; margin-top: 0;">1. Diagnostic Financial Health</h5>
-            <p style="font-size: 0.9rem; color: #CBD5E1; line-height: 1.5;">
-                Audits monthly budget allocations against the gold-standard <b>50/30/20 benchmark</b> to ensure essential living commitments do not crowd out wealth generation.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col_p2:
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
-            <h5 style="color: #34D399; margin-top: 0;">2. Statistical Anomaly Detection</h5>
-            <p style="font-size: 0.9rem; color: #CBD5E1; line-height: 1.5;">
-                Applies <b>Z-score dispersion models (>1.5σ)</b> to separate episodic one-time shocks (medical root canal, vacation) from dangerous structural lifestyle creep.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col_p3:
-        st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 16px;">
-            <h5 style="color: #FBBF24; margin-top: 0;">3. Debt & Wealth Velocity</h5>
-            <p style="font-size: 0.9rem; color: #CBD5E1; line-height: 1.5;">
-                Simulates mathematical <b>Avalanche vs. Snowball payoff trajectories</b> and projects milestone goal feasibility based on empirical surplus velocity.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
 
 # ─── TAB 2: Hypotheses & Findings ──────────────────────────────────────────────
 with tab_hypotheses:
@@ -269,6 +238,3 @@ with tab_methodology:
     $$I_t = P_t \\times \\left(\\frac{r}{12}\\right), \\quad P_{t+1} = P_t - (EMI - I_t)$$
     - Comparing Avalanche (descending $r$) and Snowball (ascending $P$) algorithms.
     """)
-
-st.divider()
-st.info("💡 **Ready to explore?** Use the sidebar navigation to examine the **Executive Dashboard**, **Financial Reports & Anomaly Detection**, **Budget Variance Analysis**, and **Net Worth Waterfall**.")
