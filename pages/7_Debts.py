@@ -11,7 +11,7 @@ import plotly.express as px
 from datetime import date, datetime
 
 from utils import (
-    load_debts, save_debts, append_rows, get_symbol, load_data, render_demo_reset_sidebar,
+    load_debts, save_debts, append_rows, get_symbol, render_currency_selector, load_data,
 )
 from auth import require_login
 
@@ -28,10 +28,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
-    render_demo_reset_sidebar()
+    sym = render_currency_selector()
 
 st.title("💸 Debt & Liabilities Intelligence")
 st.caption("Manage loans, credit card payoffs, EMIs, and simulate debt-free payoff trajectories.")

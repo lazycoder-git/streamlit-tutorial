@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from datetime import date, datetime
 
 from utils import (
-    load_data, load_debts, get_symbol, load_assets, save_assets, render_demo_reset_sidebar,
+    load_data, load_debts, get_symbol, render_currency_selector, load_assets, save_assets,
 )
 from auth import require_login
 
@@ -27,10 +27,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
-    render_demo_reset_sidebar()
+    sym = render_currency_selector()
 
 st.title("🏦 Net Worth & Balance Sheet Intelligence")
 st.caption("Consolidated net wealth evaluation combining liquid capital, investments, physical assets, and debt obligations.")

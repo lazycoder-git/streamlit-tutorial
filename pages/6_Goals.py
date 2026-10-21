@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from datetime import date, datetime
 
 from utils import (
-    load_goals, save_goals, load_data, get_symbol, render_demo_reset_sidebar, GOAL_EMOJIS,
+    load_goals, save_goals, load_data, get_symbol, render_currency_selector, GOAL_EMOJIS,
 )
 from auth import require_login
 
@@ -27,10 +27,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
-    render_demo_reset_sidebar()
+    sym = render_currency_selector()
 
 st.title("🎯 Financial Goals & Milestone Intelligence")
 st.caption("Track progress, project feasibility dates, and optimize wealth accumulation velocity.")

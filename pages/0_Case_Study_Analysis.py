@@ -13,7 +13,7 @@ from datetime import datetime
 
 from utils import (
     load_data, load_budgets, load_debts, load_goals, load_assets,
-    get_symbol, render_demo_reset_sidebar, MONTHS,
+    get_symbol, render_currency_selector, render_demo_reset_sidebar, MONTHS,
 )
 from auth import require_login
 
@@ -30,9 +30,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
+    sym = render_currency_selector()
     render_demo_reset_sidebar()
 
 # ── Header Banner ──────────────────────────────────────────────────────────────

@@ -305,13 +305,14 @@ def reset_demo_data():
 
 
 def render_demo_reset_sidebar():
-    """Render a one-click button in sidebar to reload rich demo data."""
+    """Render a clean, unobtrusive expander at bottom of sidebar to reload demo data."""
     st.sidebar.divider()
-    st.sidebar.markdown("##### ⚡ Evaluator Tools")
-    if st.sidebar.button("🔄 Reload 12-Mo Case Study Data", use_container_width=True, help="Re-seeds 12 months of rich financial data, budgets, goals, and debts"):
-        reset_demo_data()
-        st.sidebar.success("✅ Reloaded 12-month Case Study!")
-        st.rerun()
+    with st.sidebar.expander("⚡ Demo Data Controls", expanded=False):
+        st.caption("Re-seed the complete 12-month empirical dataset across all collections.")
+        if st.button("🔄 Reset 12-Mo Data", use_container_width=True, key="btn_reset_demo_data"):
+            reset_demo_data()
+            st.success("✅ Reloaded 12-month Case Study!")
+            st.rerun()
 
 
 # ─── Sidebar currency selector ────────────────────────────────────────────────

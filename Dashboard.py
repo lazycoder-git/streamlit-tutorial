@@ -30,25 +30,22 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
     sym = render_currency_selector()
     st.divider()
 
+    st.subheader("📅 Period & Target")
     now = datetime.now()
-    sel_month_name = st.selectbox("📅 Month", MONTHS, index=now.month - 1, key="dash_month")
+    sel_month_name = st.selectbox("Month", MONTHS, index=now.month - 1, key="dash_month")
     sel_year = st.number_input("Year", min_value=2020, max_value=2035,
                                 value=now.year, step=1, key="dash_year")
     month_num = MONTHS.index(sel_month_name) + 1
 
-    st.divider()
     savings_goal = st.number_input(
-        f"🎯 Monthly Savings Goal ({sym})",
+        f"🎯 Savings Goal ({sym})",
         min_value=0.0, value=800.0, step=100.0, format="%.2f",
         key="dash_goal",
     )
 
-    # 1-Click Reload Demo Case Study Button
     render_demo_reset_sidebar()
 
 # ── Header ─────────────────────────────────────────────────────────────────────

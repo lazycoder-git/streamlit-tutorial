@@ -28,10 +28,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
     sym = render_currency_selector()
-    render_demo_reset_sidebar()
 
 # ── Type themes ────────────────────────────────────────────────────────────────
 THEMES = {

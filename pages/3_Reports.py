@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 from utils import (
-    load_data, get_symbol, render_demo_reset_sidebar, MONTHS, EXPENSE_CATS,
+    load_data, get_symbol, render_currency_selector, MONTHS, EXPENSE_CATS,
 )
 from auth import require_login
 
@@ -29,17 +29,14 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
+    sym = render_currency_selector()
     st.divider()
 
+    st.subheader("📅 Reporting Period")
     now = datetime.now()
-    sel_month = st.selectbox("📅 Month", MONTHS, index=now.month - 1, key="rep_month")
+    sel_month = st.selectbox("Month", MONTHS, index=now.month - 1, key="rep_month")
     sel_year  = st.number_input("Year", 2020, 2035, value=now.year, step=1, key="rep_year")
     month_num = MONTHS.index(sel_month) + 1
-
-    render_demo_reset_sidebar()
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 df = load_data()

@@ -13,7 +13,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 from utils import (
-    load_data, save_dataframe, get_symbol, render_demo_reset_sidebar,
+    load_data, save_dataframe, get_symbol, render_currency_selector,
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS, COLUMNS,
 )
 from auth import require_login
@@ -33,9 +33,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
+    sym = render_currency_selector()
     st.divider()
 
     st.subheader("🔍 Filters")
@@ -47,8 +45,6 @@ with st.sidebar:
         start_date = st.date_input("From", value=start_default, key="h_start")
     with c2:
         end_date = st.date_input("To",   value=today,         key="h_end")
-
-    render_demo_reset_sidebar()
 
     type_filter = st.selectbox(
         "Type", ["All", "Income", "Expense", "Transfer"], key="h_type"

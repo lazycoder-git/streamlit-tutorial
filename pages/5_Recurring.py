@@ -12,7 +12,7 @@ import uuid
 from datetime import date
 
 from utils import (
-    load_recurring, save_recurring, append_rows, get_symbol, render_demo_reset_sidebar,
+    load_recurring, save_recurring, append_rows, get_symbol, render_currency_selector,
     RECURRENCE_OPTS,
 )
 from auth import require_login
@@ -30,10 +30,7 @@ require_login()
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 💰 Money Tracker")
-    st.divider()
-    sym = get_symbol()
-    render_demo_reset_sidebar()
+    sym = render_currency_selector()
 
 # ── Page header ────────────────────────────────────────────────────────────────
 st.title("🔁 Recurring Transactions")
