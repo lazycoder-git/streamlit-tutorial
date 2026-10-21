@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 from utils import (
-    load_data, load_budgets, save_budgets, get_symbol,
+    load_data, load_budgets, save_budgets, get_symbol, render_demo_reset_sidebar,
     EXPENSE_CATS, MONTHS,
 )
 from auth import require_login
@@ -37,6 +37,8 @@ with st.sidebar:
     sel_month_name = st.selectbox("📅 Month", MONTHS, index=now.month - 1, key="bud_month")
     sel_year  = st.number_input("Year", 2020, 2035, value=now.year, step=1, key="bud_year")
     month_num = MONTHS.index(sel_month_name) + 1
+
+    render_demo_reset_sidebar()
 
 # ── Load data ──────────────────────────────────────────────────────────────────
 df       = load_data()
@@ -206,44 +208,94 @@ with track_col:
                     for c in unbudgeted]
             st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-# ── Summary radar chart ────────────────────────────────────────────────────────
+# ── Summary Charts: Budget vs Actual & Radar Overview ─────────────────────────
 if budgets and month_exp:
     st.divider()
-    st.subheader("🕸️ Budget Overview Radar")
-    cats_with_both = [c for c in budgets if month_exp.get(c, 0) > 0]
-    if cats_with_both:
-        r_spent  = [min(month_exp.get(c, 0) / budgets[c], 1.5) * 100 for c in cats_with_both]
-        theta    = cats_with_both + [cats_with_both[0]]
-        r_vals   = r_spent + [r_spent[0]]
+    b_col1, b_col2 = st.columns([1.3, 1], gap="large")
 
-        fig_radar = go.Figure()
-        fig_radar.add_trace(go.Scatterpolar(
-            r=r_vals, theta=theta,
-            fill="toself",
-            fillcolor="rgba(124,58,237,0.2)",
-            line=dict(color="#7C3AED", width=2),
-            name="% of Budget Used",
-        ))
-        # 100% reference circle
-        fig_radar.add_trace(go.Scatterpolar(
-            r=[100] * (len(cats_with_both) + 1), theta=theta,
-            mode="lines",
-            line=dict(color="rgba(255,215,0,0.5)", width=1.5, dash="dot"),
-            name="Budget Limit (100%)",
-            showlegend=True,
-        ))
-        fig_radar.update_layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 150],
-                                ticksuffix="%",
-                                gridcolor="rgba(255,255,255,0.1)"),
-                angularaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
-                bgcolor="rgba(0,0,0,0)",
-            ),
-            paper_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="white"),
-            height=380,
-            margin=dict(t=20, b=20, l=40, r=40),
-            legend=dict(orientation="h", yanchor="bottom", y=-0.15),
-        )
-        st.plotly_chart(fig_radar, use_container_width=True)
+    with b_col1:
+        st.subheader("📊 Budget Limit vs. Actual Outflow")
+        b_chart_data = []
+        for cat in sorted(budgets.keys()):
+            lim = float(budgets[cat])
+            act = float(month_exp.get(cat, 0.0))
+            if lim > 0 or act > 0:
+                b_chart_data.append({"Category": cat, "Type": "Budget Limit", "Amount": lim})
+                b_chart_data.append({"Category": cat, "Type": "Actual Spent", "Amount": act})
+
+        if b_chart_data:
+            df_b_chart = pd.DataFrame(b_chart_data)
+            fig_b_bar = px.bar(
+                df_b_chart, x="Category", y="Amount", color="Type",
+                barmode="group",
+                color_discrete_map={"Budget Limit": "#7C3AED", "Actual Spent": "#EF4444"},
+                labels={"Amount": f"Amount ({sym})", "Category": "", "Type": ""}
+            )
+            fig_b_bar.update_layout(
+                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="white"), height=380,
+                margin=dict(t=20, b=20, l=10, r=10),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02),
+                xaxis=dict(showgrid=False),
+                yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)")
+            )
+            st.plotly_chart(fig_b_bar, use_container_width=True)
+            st.caption(f"💡 **Chart Interpretation**: Compares planned budget ceilings against actual spending. Purple bars exceeding red bars indicate surplus budget cushions.")
+
+    with b_col2:
+        st.subheader("🕸️ Budget Overview Radar")
+        cats_with_both = [c for c in budgets if month_exp.get(c, 0) > 0]
+        if cats_with_both:
+            r_spent  = [min(month_exp.get(c, 0) / budgets[c], 1.5) * 100 for c in cats_with_both]
+            theta    = cats_with_both + [cats_with_both[0]]
+            r_vals   = r_spent + [r_spent[0]]
+
+            fig_radar = go.Figure()
+            fig_radar.add_trace(go.Scatterpolar(
+                r=r_vals, theta=theta,
+                fill="toself",
+                fillcolor="rgba(124,58,237,0.2)",
+                line=dict(color="#7C3AED", width=2),
+                name="% of Budget Used",
+            ))
+            # 100% reference circle
+            fig_radar.add_trace(go.Scatterpolar(
+                r=[100] * (len(cats_with_both) + 1), theta=theta,
+                mode="lines",
+                line=dict(color="rgba(255,215,0,0.5)", width=1.5, dash="dot"),
+                name="Budget Limit (100%)",
+                showlegend=True,
+            ))
+            fig_radar.update_layout(
+                polar=dict(
+                    radialaxis=dict(visible=True, range=[0, 150],
+                                    ticksuffix="%",
+                                    gridcolor="rgba(255,255,255,0.1)"),
+                    angularaxis=dict(gridcolor="rgba(255,255,255,0.1)"),
+                    bgcolor="rgba(0,0,0,0)",
+                ),
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="white"),
+                height=380,
+                margin=dict(t=20, b=20, l=40, r=40),
+                legend=dict(orientation="h", yanchor="bottom", y=-0.15),
+            )
+            st.plotly_chart(fig_radar, use_container_width=True)
+            st.caption("💡 **Chart Interpretation**: Radial expansion past the dashed gold 100% line highlights categories experiencing budget slippage.")
+
+    # ── Analytical Budget Variance Diagnostic ──────────────────────────────────
+    total_budgeted = sum(budgets.values())
+    total_spent_budgeted = sum(month_exp.get(c, 0.0) for c in budgets)
+    utilization_rate = (total_spent_budgeted / total_budgeted * 100) if total_budgeted > 0 else 0.0
+    net_variance = total_budgeted - total_spent_budgeted
+
+    st.markdown(f"""
+    <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 14px 18px; border-radius: 6px; margin-top: 15px;">
+        <h5 style="margin: 0 0 6px 0; color: #A78BFA;">🎯 Budget Variance & Discipline Analysis</h5>
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.93rem; color: #E2E8F0; line-height: 1.6;">
+            <li><b>Aggregate Utilization</b>: You have utilized <b>{utilization_rate:.1f}%</b> ({sym}{total_spent_budgeted:,.2f}) of your total allocated budget limit of <b>{sym}{total_budgeted:,.2f}</b>, leaving a net variance cushion of <b>{sym}{net_variance:,.2f}</b>.</li>
+            <li><b>Discipline Evaluation</b>: {'🟢 <b>Controlled Execution</b>: Aggregate spending remained within the budgeted ceiling.' if utilization_rate <= 100 else '⚠️ <b>Budget Breach</b>: Aggregate outflow exceeded overall limits.'}</li>
+            <li><b>Behavioral Recommendation</b>: For categories approaching or exceeding 100% capacity (e.g. Dining or Shopping), shift unspent surpluses from predictable utility or transport buckets to maintain net monthly savings momentum without friction.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)

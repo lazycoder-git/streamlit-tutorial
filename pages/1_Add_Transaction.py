@@ -1,5 +1,6 @@
 """pages/1_Add_Transaction.py — Log income, expense, or transfer."""
 
+from sympy import div
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -9,7 +10,7 @@ import uuid
 from datetime import date
 
 from utils import (
-    load_data, append_rows, render_currency_selector,
+    load_data, append_rows, render_currency_selector, render_demo_reset_sidebar,
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS,
     load_budgets, check_duplicate,
 )
@@ -31,6 +32,7 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = render_currency_selector()
+    render_demo_reset_sidebar()
 
 # ── Type themes ────────────────────────────────────────────────────────────────
 THEMES = {
@@ -93,6 +95,9 @@ tx_type = st.radio(
 theme = THEMES[tx_type]
 
 # Coloured banner
+
+
+
 st.markdown(f"""
 <div style="
     background: linear-gradient(90deg, {theme['bg']}, transparent);
@@ -195,41 +200,63 @@ else:
             height=102, key="tx_desc",
         )
 
-    # ── Budget hint for Expense ────────────────────────────────────────────────
-    if tx_type == "Expense" and tx_cat and tx_cat in budgets:
+    # ── Real-Time Financial Impact & Analytical Sensitivity Simulator ────────
+    if tx_type == "Expense" and tx_cat and tx_amount > 0:
         month_num = tx_date.month
         year_num  = tx_date.year
-        if not df.empty:
-            spent = float(
-                df[
-                    (df["type"] == "Expense") &
-                    (df["category"] == tx_cat) &
-                    (df["date"].dt.month == month_num) &
-                    (df["date"].dt.year == year_num)
-                ]["amount"].sum()
+        m_mask = (df["date"].dt.month == month_num) & (df["date"].dt.year == year_num)
+        mdf_cur = df[m_mask] if not df.empty else pd.DataFrame()
+        
+        cur_inc = float(mdf_cur[mdf_cur["type"] == "Income"]["amount"].sum()) if not mdf_cur.empty else 4200.0
+        cur_exp = float(mdf_cur[mdf_cur["type"] == "Expense"]["amount"].sum()) if not mdf_cur.empty else 0.0
+        
+        cur_savings = cur_inc - cur_exp
+        cur_sav_rate = (cur_savings / cur_inc * 100) if cur_inc > 0 else 0.0
+        
+        post_exp = cur_exp + tx_amount
+        post_savings = cur_inc - post_exp
+        post_sav_rate = (post_savings / cur_inc * 100) if cur_inc > 0 else 0.0
+        
+        # Budget check
+        budget_limit = budgets.get(tx_cat, 0.0)
+        cat_spent = float(mdf_cur[(mdf_cur["type"] == "Expense") & (mdf_cur["category"] == tx_cat)]["amount"].sum()) if not mdf_cur.empty else 0.0
+        new_cat_spent = cat_spent + tx_amount
+
+        st.markdown("##### ⚡ Real-Time Financial Impact Simulation")
+        sim_col1, sim_col2, sim_col3 = st.columns(3)
+        sim_col1.metric(
+            "This Month's Outflow",
+            f"{sym}{post_exp:,.2f}",
+            delta=f"+{sym}{tx_amount:,.2f} increase",
+            delta_color="inverse"
+        )
+        sim_col2.metric(
+            "Projected Savings Rate",
+            f"{post_sav_rate:.1f}%",
+            delta=f"{post_sav_rate - cur_sav_rate:.1f}% shift",
+            delta_color="normal" if post_sav_rate >= 20 else "inverse"
+        )
+        if budget_limit > 0:
+            pct_used = (new_cat_spent / budget_limit) * 100
+            sim_col3.metric(
+                f"{tx_cat} Budget Utilization",
+                f"{pct_used:.1f}%",
+                delta=f"{sym}{budget_limit - new_cat_spent:,.2f} remaining" if new_cat_spent <= budget_limit else f"-{sym}{new_cat_spent - budget_limit:,.2f} over limit",
+                delta_color="normal" if new_cat_spent <= budget_limit else "inverse"
             )
         else:
-            spent = 0.0
-        budget_limit = budgets[tx_cat]
-        new_spent    = spent + tx_amount
-        remaining    = budget_limit - new_spent
-        pct = new_spent / budget_limit if budget_limit > 0 else 0
-        if new_spent > budget_limit:
-            st.error(
-                f"⚠️ **Over budget!** Adding this will put **{tx_cat}** at "
-                f"{sym}{new_spent:,.2f} — **{sym}{abs(remaining):,.2f} over** your "
-                f"{sym}{budget_limit:,.2f} monthly limit."
-            )
-        elif pct >= 0.75:
-            st.warning(
-                f"🔶 **Near budget limit!** {tx_cat}: {sym}{new_spent:,.2f} / "
-                f"{sym}{budget_limit:,.2f} ({pct*100:.0f}%)"
-            )
-        else:
-            st.info(
-                f"💡 Budget for {tx_cat}: {sym}{spent:,.2f} spent · "
-                f"{sym}{remaining:,.2f} remaining of {sym}{budget_limit:,.2f}"
-            )
+            sim_col3.metric("Category Allocation", tx_cat, delta="Unbudgeted category")
+
+        # Behavioral & Analytical Insight Box
+        st.markdown(f"""
+        <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 12px 16px; border-radius: 6px; margin-top: 10px; margin-bottom: 15px;">
+            <span style="font-size: 0.85rem; font-weight: 700; color: #A78BFA; text-transform: uppercase;">🧠 What This Entry Conveys & Analytical Takeaway</span>
+            <p style="margin: 4px 0 0 0; font-size: 0.92rem; color: #E2E8F0; line-height: 1.5;">
+                Adding this <b>{sym}{tx_amount:,.2f}</b> expense to <b>{tx_cat}</b> adjusts your monthly net savings rate from <b>{cur_sav_rate:.1f}%</b> to <b>{post_sav_rate:.1f}%</b>.
+                {' Maintaining a savings rate above 20% complies with wealth accumulation targets.' if post_sav_rate >= 20 else ' ⚠️ Note: This pushes your savings rate below the recommended 20% threshold. Consider balancing with non-essential spending reductions elsewhere.'}
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
     icon = "📈" if tx_type == "Income" else "📉"
     submit_label = f"{icon}  Add {tx_type}"

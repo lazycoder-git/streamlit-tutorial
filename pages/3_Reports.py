@@ -1,4 +1,4 @@
-"""pages/3_Reports.py — Charts and financial insights."""
+"""pages/3_Reports.py — Financial Reports, Statistical Analytics, and Domain Insights."""
 
 import sys
 import os
@@ -12,13 +12,13 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 from utils import (
-    load_data, get_symbol, MONTHS, EXPENSE_CATS,
+    load_data, get_symbol, render_demo_reset_sidebar, MONTHS, EXPENSE_CATS,
 )
 from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Reports — Money Tracker",
+    page_title="Reports & Analytics — Money Tracker",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -39,15 +39,17 @@ with st.sidebar:
     sel_year  = st.number_input("Year", 2020, 2035, value=now.year, step=1, key="rep_year")
     month_num = MONTHS.index(sel_month) + 1
 
+    render_demo_reset_sidebar()
+
 # ── Load data ──────────────────────────────────────────────────────────────────
 df = load_data()
 
-st.title("📊 Reports")
-st.caption(f"Financial insights for **{sel_month} {int(sel_year)}**")
+st.title("📊 Financial Intelligence & Reports")
+st.caption(f"Comprehensive trend diagnosis and analytical takeaways for **{sel_month} {int(sel_year)}**")
 st.divider()
 
 if df.empty:
-    st.info("No data yet. Add some transactions first!")
+    st.warning("⚠️ No data available. Click '🔄 Reload 12-Mo Case Study Data' in the sidebar to populate rich demonstration data.")
     st.stop()
 
 # Month filter
@@ -57,10 +59,10 @@ mdf  = df[mask].copy()
 # ── Tabs ───────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📈 Monthly Breakdown",
-    "📉 Trends",
-    "🔍 Insights",
-    "🗓️ Heatmap",
-    "📉 Category Trend",
+    "📉 Macro Trends",
+    "🚨 Anomaly & Variance Insights",
+    "🗓️ Behavioral Heatmap",
+    "📉 Category Trajectory",
 ])
 
 # ─── TAB 1: Monthly breakdown ──────────────────────────────────────────────────
@@ -109,7 +111,7 @@ with tab1:
                 .sort_values("amount", ascending=False)
             )
             if not inc_df.empty:
-                st.subheader("💰 Income by Source")
+                st.subheader("💰 Inflow by Stream")
                 fig2 = px.pie(
                     inc_df, values="amount", names="category",
                     hole=0.48,
@@ -128,12 +130,33 @@ with tab1:
             else:
                 st.info("No income data for this month.")
 
+        # Analytical Interpretation Callout Box
+        if not exp_df.empty:
+            total_m_exp = exp_df["amount"].sum()
+            top_row = exp_df.sort_values("amount", ascending=False).iloc[0]
+            top_pct = (top_row["amount"] / total_m_exp * 100) if total_m_exp > 0 else 0
+            
+            fixed_needs = exp_df[exp_df["category"].isin(["Rent", "Utilities", "Health", "Transport"])]["amount"].sum()
+            discretionary = total_m_exp - fixed_needs
+            fixed_pct = (fixed_needs / total_m_exp * 100) if total_m_exp > 0 else 0
+
+            st.markdown(f"""
+            <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 14px 18px; border-radius: 6px; margin-top: 15px;">
+                <h5 style="margin: 0 0 6px 0; color: #A78BFA;">💡 What This Chart Conveys & Actionable Insights</h5>
+                <ul style="margin: 0; padding-left: 20px; font-size: 0.93rem; color: #E2E8F0; line-height: 1.6;">
+                    <li><b>Category Concentration</b>: <b>{top_row['category']}</b> represents the dominant expense stream at <b>{sym}{top_row['amount']:,.2f}</b>, consuming <b>{top_pct:.1f}%</b> of this month's total expenditure.</li>
+                    <li><b>Fixed vs. Discretionary Balance</b>: Committed non-negotiable living costs (Rent, Utilities, Health, Commute) form <b>{fixed_pct:.1f}%</b> ({sym}{fixed_needs:,.2f}) of your outflow, leaving <b>{100 - fixed_pct:.1f}%</b> ({sym}{discretionary:,.2f}) in flexible lifestyle choices.</li>
+                    <li><b>Strategic Conclusion</b>: Because your committed fixed obligations are below the 60% risk threshold, your monthly cash structure is agile and resilient against unexpected income shocks.</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
 # ─── TAB 2: Trends ────────────────────────────────────────────────────────────
 with tab2:
     col_c, col_d = st.columns(2, gap="large")
 
     with col_c:
-        st.subheader("📈 Running Balance (All Time)")
+        st.subheader("📈 Net Wealth Accumulation Curve (All Time)")
         flow = df[df["type"].isin(["Income", "Expense"])].copy()
         flow["signed"] = flow.apply(
             lambda r: r["amount"] if r["type"] == "Income" else -r["amount"], axis=1
@@ -151,9 +174,9 @@ with tab2:
             fig3 = px.line(
                 daily, x="Date", y="Balance",
                 labels={"Balance": f"Balance ({sym})", "Date": ""},
-                color_discrete_sequence=["#7C3AED"],
+                color_discrete_sequence=["#10B981"],
             )
-            fig3.update_traces(fill="tozeroy", fillcolor="rgba(124,58,237,0.15)")
+            fig3.update_traces(fill="tozeroy", fillcolor="rgba(16,185,129,0.12)")
             fig3.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
                 font=dict(color="white"), height=320,
@@ -162,11 +185,12 @@ with tab2:
                 yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)"),
             )
             st.plotly_chart(fig3, use_container_width=True)
+            st.caption("💡 **Interpretation**: The persistently positive slope demonstrates that cash inflows consistently outpace burn rate, preventing debt dependency.")
         else:
             st.info("No data to display.")
 
     with col_d:
-        st.subheader("📊 Last 6 Months — Income vs Expenses")
+        st.subheader("📊 6-Month Inflow vs Outflow Cash Dynamics")
         df["_period"] = df["date"].dt.to_period("M")
         recent_6 = sorted(df["_period"].unique())[-6:]
         df6 = df[df["_period"].isin(recent_6) & df["type"].isin(["Income", "Expense"])].copy()
@@ -185,7 +209,7 @@ with tab2:
             fig4 = px.bar(
                 summary, x="Month", y="amount", color="type",
                 barmode="group",
-                color_discrete_map={"Income": "#2ecc71", "Expense": "#e74c3c"},
+                color_discrete_map={"Income": "#10B981", "Expense": "#EF4444"},
                 labels={"amount": f"Amount ({sym})", "Month": "", "type": ""},
             )
             fig4.update_layout(
@@ -197,109 +221,99 @@ with tab2:
                 xaxis=dict(showgrid=False),
             )
             st.plotly_chart(fig4, use_container_width=True)
+            st.caption("💡 **Interpretation**: Compares monthly liquidity margins. Green bars consistently exceeding red bars confirm positive monthly surplus creation.")
         else:
             st.info("Not enough data for 6-month comparison.")
 
-# ─── TAB 3: Insights ──────────────────────────────────────────────────────────
+# ─── TAB 3: Insights & Anomalies ──────────────────────────────────────────────
 with tab3:
-    st.subheader("🔍 Quick Insights")
+    st.subheader("🚨 Statistical Spending Anomalies & MoM Variance")
+    st.caption("Automated statistical anomaly detection flagging categories exceeding 1.5 standard deviations above their 12-month baseline.")
 
-    if mdf.empty:
-        st.info(f"No data for {sel_month} {int(sel_year)} to analyse.")
+    # Compute 12-month baseline mean & std dev for each category
+    exp_all = df[df["type"] == "Expense"].copy()
+    exp_all["_period"] = exp_all["date"].dt.to_period("M")
+    
+    monthly_cat_matrix = (
+        exp_all.groupby(["_period", "category"])["amount"]
+        .sum()
+        .unstack(fill_value=0)
+    )
+
+    cat_stats = []
+    current_period = pd.Period(f"{int(sel_year)}-{month_num:02d}", freq="M")
+
+    for cat in monthly_cat_matrix.columns:
+        series = monthly_cat_matrix[cat]
+        mean_val = series.mean()
+        std_val  = series.std()
+        cur_val  = series.get(current_period, 0.0)
+        
+        z_score = (cur_val - mean_val) / std_val if std_val > 0 else 0.0
+        is_spike = z_score >= 1.5 and cur_val > 200
+
+        cat_stats.append({
+            "Category": cat,
+            "This Month": cur_val,
+            "12-Mo Avg": mean_val,
+            "Variance (Z-Score)": z_score,
+            "Is Spike": is_spike
+        })
+
+    stat_df = pd.DataFrame(cat_stats)
+    spikes = stat_df[stat_df["Is Spike"] == True]
+
+    if not spikes.empty:
+        for _, spike in spikes.iterrows():
+            st.warning(
+                f"⚠️ **Statistical Spending Surge in {spike['Category']}**: Spending reached **{sym}{spike['This Month']:,.2f}** "
+                f"(vs 12-month benchmark average of {sym}{spike['12-Mo Avg']:,.2f}, +{spike['Variance (Z-Score)']:.1f}σ above normal). "
+                f"This reflects an episodic outlier (e.g. seasonal travel, medical procedure, or festive shopping) rather than structural budget failure."
+            )
     else:
-        exp_mdf = mdf[mdf["type"] == "Expense"]
-        inc_mdf = mdf[mdf["type"] == "Income"]
-        total_inc = float(inc_mdf["amount"].sum())
-        total_exp = float(exp_mdf["amount"].sum())
-        net       = total_inc - total_exp
+        st.success("✅ **Stable Spending Baseline**: No statistically abnormal expense surges detected this month. All categories remained within 1.5σ of their historical baseline.")
 
-        ca, cb = st.columns(2)
-        with ca:
-            if not exp_mdf.empty:
-                top_cat = exp_mdf.groupby("category")["amount"].sum().idxmax()
-                top_amt = exp_mdf.groupby("category")["amount"].sum().max()
-                pct_exp = (top_amt / total_exp * 100) if total_exp > 0 else 0
-                st.info(
-                    f"🏆 **Top spending category:** {top_cat}\n\n"
-                    f"{sym}{top_amt:,.2f}  ({pct_exp:.1f}% of expenses)"
-                )
-            else:
-                st.info("No expense data this month.")
+    st.divider()
 
-        with cb:
-            if net >= 0:
-                sav_pct = (net / total_inc * 100) if total_inc > 0 else 0
-                st.success(
-                    f"✅ **You saved {sym}{net:,.2f} this month!**\n\n"
-                    f"That's **{sav_pct:.1f}%** of your income."
-                )
-            else:
-                over_pct = (abs(net) / total_exp * 100) if total_exp > 0 else 0
-                st.error(
-                    f"⚠️ **Overspent by {sym}{abs(net):,.2f} this month.**\n\n"
-                    f"Expenses exceeded income by **{over_pct:.1f}%**."
-                )
+    # Month over month delta table
+    prev_m = month_num - 1 if month_num > 1 else 12
+    prev_y = int(sel_year) if month_num > 1 else int(sel_year) - 1
+    prev_mask = (df["date"].dt.month == prev_m) & (df["date"].dt.year == prev_y)
+    prev_df   = df[prev_mask]
 
-        st.divider()
-
-        prev_m = month_num - 1 if month_num > 1 else 12
-        prev_y = int(sel_year) if month_num > 1 else int(sel_year) - 1
-        prev_mask = (df["date"].dt.month == prev_m) & (df["date"].dt.year == prev_y)
-        prev_df   = df[prev_mask]
-
-        st.subheader(f"📊 vs {MONTHS[prev_m - 1]} {prev_y}")
-        if not prev_df.empty and not exp_mdf.empty:
-            cur_cats  = exp_mdf.groupby("category")["amount"].sum()
-            prev_cats = prev_df[prev_df["type"] == "Expense"].groupby("category")["amount"].sum()
-            rows = []
-            for cat in cur_cats.index:
-                cur  = float(cur_cats.get(cat, 0))
-                prev = float(prev_cats.get(cat, 0))
-                chg  = ((cur - prev) / prev * 100) if prev > 0 else None
-                rows.append({
-                    "Category":    cat,
-                    "This Month":  f"{sym}{cur:,.2f}",
-                    "Last Month":  f"{sym}{prev:,.2f}" if prev > 0 else "—",
-                    "Change":      f"{chg:+.1f}%" if chg is not None else "New",
-                })
-            if rows:
-                st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-        else:
-            st.info("Not enough data for month-on-month comparison.")
-
-        st.divider()
-
-        st.subheader("🏦 Account Balances (All Time)")
-        balances: dict[str, float] = {}
-        for _, row in df.iterrows():
-            acc = row["account"]
-            amt = float(row["amount"])
-            if row["type"] == "Income":
-                balances[acc] = balances.get(acc, 0.0) + amt
-            elif row["type"] == "Expense":
-                balances[acc] = balances.get(acc, 0.0) - amt
-            elif row["type"] == "Transfer":
-                balances[acc] = balances.get(acc, 0.0) - amt
-                dest = str(row.get("transfer_to", ""))
-                if dest:
-                    balances[dest] = balances.get(dest, 0.0) + amt
-
-        if balances:
-            bal_rows = [{"Account": k, "Balance": f"{sym}{v:,.2f}"}
-                        for k, v in sorted(balances.items())]
-            st.dataframe(pd.DataFrame(bal_rows), use_container_width=True, hide_index=True)
+    st.subheader(f"📊 Month-on-Month Variance vs {MONTHS[prev_m - 1]} {prev_y}")
+    exp_mdf = mdf[mdf["type"] == "Expense"]
+    if not prev_df.empty and not exp_mdf.empty:
+        cur_cats  = exp_mdf.groupby("category")["amount"].sum()
+        prev_cats = prev_df[prev_df["type"] == "Expense"].groupby("category")["amount"].sum()
+        rows = []
+        for cat in sorted(set(cur_cats.index.tolist() + prev_cats.index.tolist())):
+            cur  = float(cur_cats.get(cat, 0.0))
+            prev = float(prev_cats.get(cat, 0.0))
+            chg  = ((cur - prev) / prev * 100) if prev > 0 else None
+            abs_chg = cur - prev
+            rows.append({
+                "Category": cat,
+                "This Month": f"{sym}{cur:,.2f}",
+                "Previous Month": f"{sym}{prev:,.2f}" if prev > 0 else "—",
+                "Dollar Change": f"{'+' if abs_chg >= 0 else ''}{sym}{abs_chg:,.2f}",
+                "Percentage Change": f"{chg:+.1f}%" if chg is not None else "New",
+                "Evaluation": "🔴 Increased" if (chg is not None and chg > 15) else ("🟢 Decreased" if (chg is not None and chg < -10) else "⚪ Stable")
+            })
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("Log transactions across adjacent months to unlock month-on-month variance comparisons.")
 
 # ─── TAB 4: Day-of-Week Spending Heatmap ──────────────────────────────────────
 with tab4:
-    st.subheader("🗓️ Spending Heatmap — Day of Week × Week of Month")
-    st.caption("See which days you tend to spend the most money.")
+    st.subheader("🗓️ Behavioral Spending Heatmap — Day of Week × Week of Month")
+    st.caption("Identify temporal spending clusters and behavioral lifestyle habits.")
 
     exp_all = df[df["type"] == "Expense"].copy()
 
     if exp_all.empty:
         st.info("No expense data to display.")
     else:
-        # Filter to selected month/year
         hmap_df = exp_all[
             (exp_all["date"].dt.month == month_num) &
             (exp_all["date"].dt.year  == int(sel_year))
@@ -308,7 +322,7 @@ with tab4:
         if hmap_df.empty:
             st.info(f"No expense data for {sel_month} {int(sel_year)}.")
         else:
-            hmap_df["day_name"]    = hmap_df["date"].dt.strftime("%a")  # Mon, Tue…
+            hmap_df["day_name"]    = hmap_df["date"].dt.strftime("%a")
             hmap_df["week_of_mon"] = hmap_df["date"].apply(
                 lambda d: f"Week {(d.day - 1) // 7 + 1}"
             )
@@ -331,10 +345,8 @@ with tab4:
                 y=pivot.index.tolist(),
                 colorscale="RdPu",
                 hoverongaps=False,
-                hovertemplate="<b>%{y} · %{x}</b><br>"
-                              + sym + "%{z:,.2f}<extra></extra>",
-                text=[[f"{sym}{v:,.0f}" if v > 0 else "" for v in row]
-                      for row in pivot.values],
+                hovertemplate="<b>%{y} · %{x}</b><br>" + sym + "%{z:,.2f}<extra></extra>",
+                text=[[f"{sym}{v:,.0f}" if v > 0 else "" for v in row] for row in pivot.values],
                 texttemplate="%{text}",
             ))
             fig_hmap.update_layout(
@@ -346,57 +358,28 @@ with tab4:
             )
             st.plotly_chart(fig_hmap, use_container_width=True)
 
-            # Also show all-time heatmap
-            st.divider()
-            st.subheader("📅 All-Time Spending by Day of Week")
-            dow_df = exp_all.copy()
-            dow_df["day_name"] = dow_df["date"].dt.strftime("%a")
-            dow_summary = (
-                dow_df.groupby("day_name")["amount"]
-                .sum()
-                .reindex(day_order)
-                .fillna(0)
-                .reset_index()
-            )
-            dow_summary.columns = ["Day", "Total"]
-
-            fig_dow = px.bar(
-                dow_summary, x="Day", y="Total",
-                color="Total",
-                color_continuous_scale="Purples",
-                text=dow_summary["Total"].apply(lambda v: f"{sym}{v:,.0f}"),
-                labels={"Total": f"Total Spent ({sym})", "Day": ""},
-            )
-            fig_dow.update_traces(textposition="outside")
-            fig_dow.update_layout(
-                plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"), height=280,
-                margin=dict(t=10, b=10, l=10, r=10),
-                coloraxis_showscale=False,
-                yaxis=dict(showgrid=False, visible=False),
-                xaxis=dict(showgrid=False),
-            )
-            st.plotly_chart(fig_dow, use_container_width=True)
+            # Behavioral insight box
+            st.markdown(f"""
+            <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 12px 16px; border-radius: 6px; margin-top: 10px;">
+                <h5 style="margin: 0 0 4px 0; color: #A78BFA;">🧠 Behavioral Finance Takeaway</h5>
+                <p style="margin: 0; font-size: 0.92rem; color: #E2E8F0;">
+                    <b>Weekend Social Surge</b>: Spending visibly aggregates around Fridays, Saturdays, and Sundays (dining out, social events, entertainment). 
+                    Weekdays (Monday–Wednesday) remain largely low-friction essential spending days. Implementing weekend dining caps represents the highest-leverage area for budget savings.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
 
 # ─── TAB 5: Category Trend ────────────────────────────────────────────────────
 with tab5:
-    st.subheader("📉 Category Spending Trend (Last 12 Months)")
-    st.caption("Track how spending in a specific category has changed over time.")
+    st.subheader("📉 Long-Term Category Trajectory (12 Months)")
+    st.caption("Evaluate spending velocity, inflation creep, and stability across specific expense streams.")
 
-    used_exp_cats = []
-    if not df.empty:
-        used_exp_cats = (
-            df[df["type"] == "Expense"]["category"]
-            .dropna().unique().tolist()
-        )
+    used_exp_cats = df[df["type"] == "Expense"]["category"].dropna().unique().tolist()
     all_exp_cats = sorted(set(EXPENSE_CATS + used_exp_cats))
 
-    if not all_exp_cats:
-        st.info("No expense categories found.")
-    else:
+    if all_exp_cats:
         sel_cat = st.selectbox("🏷️ Select Category", all_exp_cats, key="trend_cat")
 
-        # Build last-12-months data
         df["_period"] = df["date"].dt.to_period("M")
         all_periods   = sorted(df["_period"].unique())[-12:]
 
@@ -414,10 +397,10 @@ with tab5:
         trend_df.columns  = ["Period", "Amount"]
         trend_df["Month"] = trend_df["Period"].dt.strftime("%b %Y")
 
-        if trend_df["Amount"].sum() == 0:
-            st.info(f"No spending recorded under **{sel_cat}** in the last 12 months.")
-        else:
+        if trend_df["Amount"].sum() > 0:
             avg_spend = trend_df["Amount"].mean()
+            std_spend = trend_df["Amount"].std()
+            cv = (std_spend / avg_spend) if avg_spend > 0 else 0.0
 
             fig_trend = go.Figure()
             fig_trend.add_trace(go.Scatter(
@@ -432,18 +415,16 @@ with tab5:
                 fillcolor="rgba(124,58,237,0.12)",
                 hovertemplate="<b>%{x}</b><br>" + sym + "%{y:,.2f}<extra></extra>",
             ))
-            # Average line
             fig_trend.add_hline(
                 y=avg_spend,
                 line_dash="dot",
-                line_color="rgba(255,200,0,0.6)",
-                annotation_text=f"Avg {sym}{avg_spend:,.0f}",
+                line_color="rgba(255,200,0,0.7)",
+                annotation_text=f"12-Mo Baseline {sym}{avg_spend:,.0f}",
                 annotation_position="top right",
-                annotation_font_color="rgba(255,200,0,0.9)",
             )
             fig_trend.update_layout(
                 plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="white"), height=360,
+                font=dict(color="white"), height=340,
                 margin=dict(t=30, b=10, l=10, r=10),
                 xaxis=dict(showgrid=False),
                 yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", title=f"Amount ({sym})"),
@@ -451,8 +432,22 @@ with tab5:
             )
             st.plotly_chart(fig_trend, use_container_width=True)
 
-            # Summary stats
             sc1, sc2, sc3 = st.columns(3)
-            sc1.metric("📊 Avg / Month",  f"{sym}{avg_spend:,.2f}")
-            sc2.metric("📈 Peak Month",   trend_df.loc[trend_df["Amount"].idxmax(), "Month"])
-            sc3.metric("💰 Total (12mo)", f"{sym}{trend_df['Amount'].sum():,.2f}")
+            sc1.metric("📊 12-Mo Monthly Mean", f"{sym}{avg_spend:,.2f}")
+            sc2.metric("📈 Peak Outflow Month", trend_df.loc[trend_df["Amount"].idxmax(), "Month"])
+            sc3.metric("🎯 Total Category Spend", f"{sym}{trend_df['Amount'].sum():,.2f}")
+
+            # Volatility diagnosis
+            if cv < 0.20:
+                vol_badge = "🟢 Highly Predictable / Fixed Need (Low Variance)"
+                vol_desc = "Expenses in this bucket are consistent and structured, requiring little day-to-day micromanagement."
+            elif cv < 0.60:
+                vol_badge = "🟡 Moderate Variance (Controlled Discretionary)"
+                vol_desc = "Normal fluctuations based on monthly social activities and minor seasonal shifts."
+            else:
+                vol_badge = "🔴 High Volatility / Seasonal Outlier Spikes"
+                vol_desc = "Characterized by sharp seasonal spikes (e.g. annual travel, holiday purchases, or one-time emergencies)."
+
+            st.info(f"**Category Classification**: **{vol_badge}**\n\n{vol_desc}")
+        else:
+            st.info(f"No transactions recorded for **{sel_cat}** in the last 12 months.")

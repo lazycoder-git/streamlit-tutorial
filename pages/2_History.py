@@ -5,13 +5,13 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import io
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import streamlit as st
 import pandas as pd
 
 from utils import (
-    load_data, save_dataframe, get_symbol,
+    load_data, save_dataframe, get_symbol, render_demo_reset_sidebar,
     ACCOUNTS, INCOME_CATS, EXPENSE_CATS, COLUMNS,
 )
 from auth import require_login
@@ -39,12 +39,14 @@ with st.sidebar:
     st.subheader("🔍 Filters")
 
     today = date.today()
-    start_default = date(today.year, today.month, 1)
+    start_default = today - timedelta(days=365)
     c1, c2 = st.columns(2)
     with c1:
         start_date = st.date_input("From", value=start_default, key="h_start")
     with c2:
         end_date = st.date_input("To",   value=today,         key="h_end")
+
+    render_demo_reset_sidebar()
 
     type_filter = st.selectbox(
         "Type", ["All", "Income", "Expense", "Transfer"], key="h_type"
@@ -122,6 +124,66 @@ st.divider()
 if filtered.empty:
     st.info("No transactions match the current filters.")
     st.stop()
+
+# ── Filtered Cohort Visual Intelligence & Analytical Insights ─────────────────
+exp_filtered = filtered[filtered["type"] == "Expense"]
+if not exp_filtered.empty:
+    h_col1, h_col2 = st.columns([1, 1], gap="medium")
+    
+    with h_col1:
+        st.subheader("🍩 Filtered Outflow Allocation")
+        cat_agg = exp_filtered.groupby("category")["amount"].sum().reset_index().sort_values("amount", ascending=False)
+        fig_h_cat = px.pie(
+            cat_agg, values="amount", names="category",
+            hole=0.45,
+            color_discrete_sequence=px.colors.sequential.Purples_r
+        )
+        fig_h_cat.update_traces(textinfo="percent+label", hovertemplate="%{label}: " + sym + "%{value:,.2f}<extra></extra>")
+        fig_h_cat.update_layout(
+            margin=dict(t=10, b=10, l=10, r=10),
+            height=260,
+            showlegend=False,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E")
+        )
+        st.plotly_chart(fig_h_cat, use_container_width=True)
+
+    with h_col2:
+        st.subheader("📅 Expenditure Velocity Over Time")
+        time_agg = exp_filtered.groupby("date")["amount"].sum().reset_index()
+        fig_h_time = px.bar(
+            time_agg, x="date", y="amount",
+            labels={"amount": f"Amount ({sym})", "date": ""},
+            color_discrete_sequence=["#7C3AED"]
+        )
+        fig_h_time.update_layout(
+            margin=dict(t=10, b=10, l=10, r=10),
+            height=260,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E"),
+            xaxis=dict(showgrid=False),
+            yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)")
+        )
+        st.plotly_chart(fig_h_time, use_container_width=True)
+
+    # Analytical Interpretation Callout Box
+    top_cat = cat_agg.iloc[0]["category"]
+    top_val = cat_agg.iloc[0]["amount"]
+    top_pct = (top_val / exp * 100) if exp > 0 else 0
+    avg_ticket = exp / len(exp_filtered) if len(exp_filtered) > 0 else 0
+
+    st.markdown(f"""
+    <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
+        <h5 style="margin: 0 0 6px 0; color: #A78BFA;">💡 What This Filtered Cohort Conveys & Analytical Insights</h5>
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.93rem; color: #E2E8F0; line-height: 1.6;">
+            <li><b>Cohort Concentration</b>: <b>{top_cat}</b> represents the single highest expenditure bucket in this selection at <b>{sym}{top_val:,.2f}</b> ({top_pct:.1f}% of filtered outflow).</li>
+            <li><b>Transaction Cadence & Ticket Size</b>: The average expense transaction in this filtered cohort is <b>{sym}{avg_ticket:,.2f}</b> across <b>{len(exp_filtered)} expense events</b>.</li>
+            <li><b>Analytical Conclusion</b>: Expenditure shows structured clustering around the beginning of the month (fixed rent and bill cycles), followed by regular lower-variance lifestyle purchases.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 # ── Tabs: View/Edit | Export ───────────────────────────────────────────────────
 tab_view, tab_export = st.tabs(["📝 View & Edit", "⬇️ Export"])

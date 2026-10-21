@@ -11,13 +11,13 @@ import plotly.express as px
 from datetime import date, datetime
 
 from utils import (
-    load_debts, save_debts, append_rows, get_symbol,
+    load_debts, save_debts, append_rows, get_symbol, load_data, render_demo_reset_sidebar,
 )
 from auth import require_login
 
 # ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Debts — Money Tracker",
+    page_title="Debts & Liabilities — Money Tracker",
     page_icon="💸",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -31,10 +31,13 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    render_demo_reset_sidebar()
 
-st.title("💸 Debt & EMI Tracker")
-st.caption("Manage loans, credit card payoffs, EMIs, and visualize your debt-free journey.")
+st.title("💸 Debt & Liabilities Intelligence")
+st.caption("Manage loans, credit card payoffs, EMIs, and simulate debt-free payoff trajectories.")
 st.divider()
+
+df_tx = load_data()
 
 debts = load_debts()
 
@@ -219,3 +222,121 @@ else:
                 st.rerun()
                 
         st.divider()
+
+    # ── Analytical Debt Strategy & DTI Benchmark Diagnostic ─────────────────────
+    total_monthly_emi = sum(float(d.get("emi", 0.0)) for d in debts)
+    
+    # Calculate average monthly income
+    if not df_tx.empty:
+        monthly_inc_series = df_tx[df_tx["type"] == "Income"].groupby(df_tx["date"].dt.to_period("M"))["amount"].sum()
+        avg_monthly_income = float(monthly_inc_series.mean()) if not monthly_inc_series.empty else 4200.0
+    else:
+        avg_monthly_income = 4200.0
+
+    dti_ratio = (total_monthly_emi / avg_monthly_income * 100) if avg_monthly_income > 0 else 0.0
+
+    # Sort debts by interest rate (Avalanche) and remaining principal (Snowball)
+    avalanche_debt = sorted(debts, key=lambda d: float(d.get("interest_rate", 0)), reverse=True)[0]
+    snowball_debt = sorted([d for d in debts if float(d.get("remaining", 0)) > 0], key=lambda d: float(d.get("remaining", 0)))[0] if debts else None
+
+    st.subheader("⚡ Avalanche vs. Snowball Payoff Strategy Simulation")
+    st.caption("Computational amortization simulation comparing interest minimization (Avalanche) vs. psychological velocity (Snowball).")
+
+    # Extra monthly payoff allocation slider
+    extra_pay = st.slider(f"💵 Simulated Extra Monthly Debt Paydown ({sym})", min_value=0.0, max_value=1500.0, value=300.0, step=50.0)
+
+    # Simple simulation over 24 months
+    sim_months = 24
+    av_balances = []
+    sn_balances = []
+
+    # Copy debts for simulation
+    import copy
+    debts_av = [copy.deepcopy(d) for d in debts]
+    debts_sn = [copy.deepcopy(d) for d in debts]
+
+    total_int_av = 0.0
+    total_int_sn = 0.0
+
+    for m in range(sim_months):
+        # 1. Avalanche: Extra goes to highest rate
+        tot_b_av = sum(d["remaining"] for d in debts_av)
+        av_balances.append(tot_b_av)
+        # Accrue interest & pay min
+        avail_extra_av = extra_pay
+        # Sort by rate descending
+        debts_av.sort(key=lambda d: float(d.get("interest_rate", 0)), reverse=True)
+        for d in debts_av:
+            if d["remaining"] > 0:
+                m_rate = (float(d.get("interest_rate", 0)) / 100.0) / 12.0
+                interest = d["remaining"] * m_rate
+                total_int_av += interest
+                d["remaining"] += interest
+                pay = min(d["remaining"], float(d.get("emi", 0.0)) + avail_extra_av)
+                d["remaining"] -= pay
+                avail_extra_av = max(0.0, avail_extra_av - (pay - float(d.get("emi", 0.0))))
+
+        # 2. Snowball: Extra goes to lowest remaining balance
+        tot_b_sn = sum(d["remaining"] for d in debts_sn)
+        sn_balances.append(tot_b_sn)
+        avail_extra_sn = extra_pay
+        # Sort by remaining balance ascending
+        active_sn = [d for d in debts_sn if d["remaining"] > 0]
+        active_sn.sort(key=lambda d: float(d["remaining"]))
+        for d in debts_sn:
+            if d["remaining"] > 0:
+                m_rate = (float(d.get("interest_rate", 0)) / 100.0) / 12.0
+                interest = d["remaining"] * m_rate
+                total_int_sn += interest
+                d["remaining"] += interest
+                extra_for_this = avail_extra_sn if d == (active_sn[0] if active_sn else None) else 0.0
+                pay = min(d["remaining"], float(d.get("emi", 0.0)) + extra_for_this)
+                d["remaining"] -= pay
+                avail_extra_sn = max(0.0, avail_extra_sn - extra_for_this)
+
+    sim_timeline = [f"M+{i+1}" for i in range(sim_months)]
+    sim_df = pd.DataFrame({
+        "Month": sim_timeline,
+        "Avalanche Strategy (High APR First)": av_balances,
+        "Snowball Strategy (Lowest Balance First)": sn_balances
+    })
+
+    fig_sim = px.line(
+        sim_df, x="Month",
+        y=["Avalanche Strategy (High APR First)", "Snowball Strategy (Lowest Balance First)"],
+        color_discrete_map={
+            "Avalanche Strategy (High APR First)": "#10B981",
+            "Snowball Strategy (Lowest Balance First)": "#3B82F6"
+        },
+        labels={"value": f"Total Debt Remaining ({sym})", "variable": "Strategy"}
+    )
+    fig_sim.update_layout(
+        height=320,
+        margin=dict(t=20, b=10, l=10, r=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E"),
+        xaxis=dict(showgrid=False),
+        yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)")
+    )
+    st.plotly_chart(fig_sim, use_container_width=True)
+
+    int_diff = max(0.0, total_int_sn - total_int_av)
+    sim_m1, sim_m2, sim_m3 = st.columns(3)
+    sim_m1.metric("Debt-to-Income (DTI)", f"{dti_ratio:.1f}%", delta="Healthy (≤36%)" if dti_ratio <= 36 else "Elevated (>36%)")
+    sim_m2.metric("Avalanche Interest Saved", f"{sym}{int_diff:,.2f}", delta="Mathematically Optimal")
+    sim_m3.metric("Top Priority Debt", avalanche_debt["name"], delta=f"{avalanche_debt['interest_rate']}% APR")
+
+    st.markdown(f"""
+    <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 14px 18px; border-radius: 6px; margin-top: 15px;">
+        <h5 style="margin: 0 0 6px 0; color: #A78BFA;">💡 What This Chart Conveys & Strategy Insights</h5>
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.93rem; color: #E2E8F0; line-height: 1.6;">
+            <li><b>Chart Interpretation</b>: The green Avalanche curve declines faster in early months because paying off the highest APR debt (<b>{avalanche_debt['name']}</b> at {avalanche_debt['interest_rate']}%) eliminates the heaviest interest drag immediately, saving an estimated <b>{sym}{int_diff:,.2f}</b> in interest over 24 months.</li>
+            <li><b>Debt-to-Income (DTI) Benchmark</b>: Committed monthly debt servicing ({sym}{total_monthly_emi:,.2f}) takes <b>{dti_ratio:.1f}%</b> of average income.
+                {' (🟢 <b>Excellent</b>: Well below the prudent 36% ceiling).' if dti_ratio <= 36 else ' (⚠️ <b>Elevated</b>: Exceeds safe 36% limit; accelerate debt freedom).'}
+            </li>
+            <li><b>Actionable Conclusion</b>: Adopt the **Avalanche strategy** for highest financial return. If motivation is a challenge, paying off the smallest loan first (Snowball) provides psychological momentum, but at a modest interest premium.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)

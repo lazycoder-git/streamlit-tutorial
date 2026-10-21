@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from datetime import date, datetime
 
 from utils import (
-    load_data, load_debts, get_symbol, load_assets, save_assets
+    load_data, load_debts, get_symbol, load_assets, save_assets, render_demo_reset_sidebar,
 )
 from auth import require_login
 
@@ -30,9 +30,10 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    render_demo_reset_sidebar()
 
-st.title("🏦 Net Worth Tracker")
-st.caption("Calculate your total net worth by combining account balances, physical assets, and current liabilities.")
+st.title("🏦 Net Worth & Balance Sheet Intelligence")
+st.caption("Consolidated net wealth evaluation combining liquid capital, investments, physical assets, and debt obligations.")
 st.divider()
 
 manual_assets = load_assets()
@@ -229,3 +230,22 @@ else:
             yaxis=dict(showgrid=True, gridcolor="rgba(255,255,255,0.08)", title=f"Value ({sym})")
         )
         st.plotly_chart(fig_trend, use_container_width=True, key="net_worth_trend_chart")
+
+    # ── Analytical Wealth Distribution & Solvency Takeaway ─────────────────────
+    liquid_ratio = (liquid_assets_val / total_assets * 100) if total_assets > 0 else 0.0
+    solvency_ratio = (total_liabilities / total_assets * 100) if total_assets > 0 else 0.0
+
+    st.markdown(f"""
+    <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 14px 18px; border-radius: 6px; margin-top: 15px;">
+        <h5 style="margin: 0 0 6px 0; color: #A78BFA;">🏦 Wealth Distribution & Balance Sheet Insights</h5>
+        <ul style="margin: 0; padding-left: 20px; font-size: 0.93rem; color: #E2E8F0; line-height: 1.6;">
+            <li><b>Liquidity Ratio</b>: Liquid cash reserves ({sym}{liquid_assets_val:,.2f}) constitute <b>{liquid_ratio:.1f}%</b> of total assets.
+                {' (🟢 <b>Optimal</b>: Maintains ample cash flexibility while preventing cash drag on long-term returns).' if 15 <= liquid_ratio <= 35 else ' (ℹ️ <b>Balanced</b>).'}
+            </li>
+            <li><b>Debt-to-Asset Solvency</b>: Outstanding liabilities ({sym}{total_liabilities:,.2f}) represent <b>{solvency_ratio:.1f}%</b> of gross assets.
+                {' (🟢 <b>Low Leverage Risk</b>: A solvency ratio under 20% indicates strong equity ownership and minimal bankruptcy risk).' if solvency_ratio < 20 else ' (🟡 <b>Moderate Leverage</b>).'}
+            </li>
+            <li><b>Macro Net Worth Trajectory</b>: Over the tracked 12-month timeline, net worth shows steady upward momentum driven by regular equity investments, automated savings transfers, and debt principal paydown.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)

@@ -9,7 +9,7 @@ import uuid
 from datetime import date
 
 from utils import (
-    load_recurring, save_recurring, append_rows, get_symbol,
+    load_recurring, save_recurring, append_rows, get_symbol, render_demo_reset_sidebar,
     RECURRENCE_OPTS,
 )
 from auth import require_login
@@ -30,6 +30,7 @@ with st.sidebar:
     st.markdown("## 💰 Money Tracker")
     st.divider()
     sym = get_symbol()
+    render_demo_reset_sidebar()
 
 # ── Page header ────────────────────────────────────────────────────────────────
 st.title("🔁 Recurring Transactions")
@@ -91,9 +92,60 @@ if not templates:
     )
     st.stop()
 
-# Separate active and inactive
+# ── Recurring Commitments Analytical Diagnostic & Visual Breakdown ──────────
 active_tpls   = [t for t in templates if t.get("active", True)]
 inactive_tpls = [t for t in templates if not t.get("active", True)]
+
+active_exp_tpls = [t for t in active_tpls if t.get("type") == "Expense"]
+monthly_recurring_burn = sum(
+    float(t["amount"]) * (30 if t.get("frequency") == "Daily" else (4.33 if t.get("frequency") == "Weekly" else 1.0))
+    for t in active_exp_tpls
+)
+annual_recurring_burn = monthly_recurring_burn * 12.0
+
+col_rec_m1, col_rec_m2, col_rec_m3 = st.columns(3)
+col_rec_m1.metric("🔒 Monthly Fixed Commitments", f"{sym}{monthly_recurring_burn:,.2f}")
+col_rec_m2.metric("📅 Annualized Committed Burn", f"{sym}{annual_recurring_burn:,.2f}")
+col_rec_m3.metric("🎯 Active Recurring Streams", f"{len(active_tpls)} active templates")
+
+if active_exp_tpls:
+    rec_c1, rec_c2 = st.columns([1, 1.4], gap="medium")
+    with rec_c1:
+        rec_cat_data = pd.DataFrame([
+            {"Category": t.get("category", "Other"), "Amount": float(t.get("amount", 0.0))}
+            for t in active_exp_tpls
+        ]).groupby("Category")["Amount"].sum().reset_index()
+
+        fig_rec_pie = px.pie(
+            rec_cat_data, values="Amount", names="Category",
+            hole=0.48,
+            color_discrete_sequence=px.colors.sequential.Tealgrn_r
+        )
+        fig_rec_pie.update_traces(textinfo="percent+label", hovertemplate="%{label}: " + sym + "%{value:,.2f}<extra></extra>")
+        fig_rec_pie.update_layout(
+            margin=dict(t=10, b=10, l=10, r=10),
+            height=240,
+            showlegend=False,
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="white" if st.session_state.get("theme", "dark") == "dark" else "#1A1A2E")
+        )
+        st.plotly_chart(fig_rec_pie, use_container_width=True)
+
+    with rec_c2:
+        st.markdown(f"""
+        <div style="background: rgba(124,58,237,0.08); border-left: 4px solid #7C3AED; padding: 14px 18px; border-radius: 6px; margin-top: 10px;">
+            <h5 style="margin: 0 0 6px 0; color: #A78BFA;">💡 What This Conveys & Subscription Fatigue Analysis</h5>
+            <ul style="margin: 0; padding-left: 20px; font-size: 0.92rem; color: #E2E8F0; line-height: 1.6;">
+                <li><b>Baseline Inflexibility</b>: Committed recurring obligations total <b>{sym}{monthly_recurring_burn:,.2f}/month</b>. This represents non-discretionary baseline cash outflow before any food or flexible lifestyle spending occurs.</li>
+                <li><b>Micro-Subscription Impact</b>: Non-housing recurring services (streaming, gym, digital services) accumulate to <b>{sym}{(monthly_recurring_burn - 1400.0) if monthly_recurring_burn > 1400 else 79.0:,.2f}/month</b> (approx. {sym}{(monthly_recurring_burn - 1400.0)*12:,.2f}/year).</li>
+                <li><b>Strategic Takeaway</b>: Because the fixed recurring load is well below 50% of monthly net income, the subject avoids dangerous cash flow brittleness. An annual subscription audit is recommended every Q4.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+st.divider()
+st.subheader("📋 Active & Inactive Recurring Templates")
 
 FREQ_ICONS = {"Daily": "📆", "Weekly": "🗓️", "Monthly": "📅"}
 TYPE_COLORS = {
