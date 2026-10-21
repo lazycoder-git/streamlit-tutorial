@@ -1,6 +1,5 @@
 """pages/1_Add_Transaction.py — Log income, expense, or transfer."""
 
-from sympy import div
 import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
